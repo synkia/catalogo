@@ -107,7 +107,9 @@ const AnnotatedImage = ({ image, annotations, onAnnotationClick, confidenceThres
   // Construir a URL completa da imagem
   const imageUrl = image.startsWith('http') 
     ? image 
-    : `${API_URL}${image}`;
+    : image.startsWith('/api/') 
+      ? `${API_URL}${image.substring(4)}` // Remove a duplicação do '/api/'
+      : `${API_URL}${image}`;
   console.log('URL da imagem construída:', { original: image, final: imageUrl });
   
   return (
@@ -132,7 +134,8 @@ const AnnotatedImage = ({ image, annotations, onAnnotationClick, confidenceThres
         onError={(e) => {
           console.error('Erro ao carregar imagem:', imageUrl);
           e.target.onerror = null;
-          e.target.src = 'https://via.placeholder.com/800x600?text=Erro+ao+carregar+imagem';
+          // Usar uma imagem local em vez de depender de serviços externos
+          e.target.src = '/placeholder-error.png';
         }}
         onLoad={(e) => {
           console.log('Imagem carregada com sucesso:', {
@@ -321,9 +324,11 @@ const DetectionResults = () => {
       productAnnotations.forEach(anno => {
         // Construir a URL completa da imagem
         const imagePath = page.image_path || page.image_url;
-        const imageUrl = imagePath.startsWith('http') 
-          ? imagePath 
-          : `${API_URL}${imagePath}`;
+        const imageUrl = imagePath.startsWith('http')
+          ? imagePath
+          : imagePath.startsWith('/api/')
+            ? `${API_URL}${imagePath.substring(4)}` // Remove a duplicação do '/api/'
+            : `${API_URL}${imagePath}`;
         
         exportData.products.push({
           id: anno.id,
@@ -403,6 +408,13 @@ const DetectionResults = () => {
       );
     }
     
+    // Construir URL correta para a imagem
+    const imageUrl = imagePath.startsWith('http')
+      ? imagePath
+      : imagePath.startsWith('/api/')
+        ? `${API_URL}${imagePath.substring(4)}` // Remove a duplicação do '/api/'
+        : `${API_URL}${imagePath}`;
+    
     // Estatísticas da página atual
     const pageAnnotations = currentPageResult.annotations || [];
     const productCount = pageAnnotations.filter(
@@ -430,7 +442,7 @@ const DetectionResults = () => {
           >
             <Box sx={{ width: '100%', overflow: 'auto', textAlign: 'center' }}>
               <AnnotatedImage 
-                image={imagePath}
+                image={imageUrl}
                 annotations={currentPageResult.annotations || []}
                 onAnnotationClick={handleAnnotationClick}
                 confidenceThreshold={confidenceThreshold}

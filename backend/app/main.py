@@ -289,42 +289,84 @@ async def get_catalog_detection(catalog_id: str):
     if not catalog:
         raise HTTPException(status_code=404, detail="Catálogo não encontrado")
     
-    # Para simplificar, vamos buscar o resultado mais recente para este catálogo
-    # Em um ambiente real, você pode querer buscar por job_id ou algum outro critério
+    # Tentar diferentes formatos de job_id
+    possible_job_ids = [
+        f"detection_job_{catalog_id}",  # Formato padrão
+        catalog_id,                      # O próprio catalog_id
+    ]
     
+    # Buscar na coleção de jobs se existe algum job para este catálogo
+    detection_job = await db.detection_jobs.find_one({"catalog_id": catalog_id}, sort=[("created_at", -1)])
+    if detection_job and "job_id" in detection_job:
+        possible_job_ids.insert(0, detection_job["job_id"])  # Adiciona o job_id mais recente
+    
+    # Log dos job_ids que serão testados
+    print(f"Tentando recuperar resultados para o catálogo {catalog_id} com os seguintes job_ids: {possible_job_ids}")
+    
+    # Tentar cada job_id em sucessão
+    for job_id in possible_job_ids:
+        try:
+            # Chamar o serviço ML para buscar as detecções com este job_id
+            async with httpx.AsyncClient() as client:
+                print(f"Tentando buscar resultados com job_id: {job_id}")
+                response = await client.get(f"{ML_SERVICE_URL}/results/{job_id}")
+                
+                if response.status_code == 200:
+                    result_data = response.json()
+                    
+                    # Formatar as detecções para a resposta esperada pelo frontend
+                    all_annotations = []
+                    
+                    for page_result in result_data.get("results", []):
+                        for annotation in page_result.get("annotations", []):
+                            # Adicionar informações da página ao objeto de anotação
+                            annotation["page_number"] = page_result.get("page_number", 1)
+                            annotation["image_url"] = page_result.get("image_url", "")
+                            all_annotations.append(annotation)
+                    
+                    return {
+                        "catalog_id": catalog_id,
+                        "annotations": all_annotations
+                    }
+        except httpx.RequestError as e:
+            print(f"Erro ao tentar job_id {job_id}: {str(e)}")
+            continue
+    
+    # Se nenhum dos job_ids funcionou, tentar buscar anotações manuais
     try:
-        # Chamar o serviço ML para buscar as detecções
-        # Usando o formato de job_id esperado pelo serviço ML
-        job_id = f"detection_job_{catalog_id}"
+        annotations = []
+        # Buscar as páginas do catálogo
+        pages = await db.pages.find({"catalog_id": catalog_id}).to_list(1000)
         
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{ML_SERVICE_URL}/results/{job_id}")
+        for page in pages:
+            page_number = page.get("page_number", 1)
+            # Buscar anotações para esta página
+            page_annotations = await db.annotations.find_one({
+                "catalog_id": catalog_id,
+                "page_number": page_number
+            })
             
-            if response.status_code == 200:
-                result_data = response.json()
-                
-                # Formatar as detecções para a resposta esperada pelo frontend
-                # Extrair todos os produtos de todas as páginas
-                all_annotations = []
-                
-                for page_result in result_data.get("results", []):
-                    for annotation in page_result.get("annotations", []):
-                        # Adicionar informações da página ao objeto de anotação
-                        annotation["page_number"] = page_result.get("page_number", 1)
-                        annotation["image_url"] = page_result.get("image_url", "")
-                        all_annotations.append(annotation)
-                
-                return {
-                    "catalog_id": catalog_id,
-                    "annotations": all_annotations
-                }
-            else:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"Erro no serviço ML: {response.text}"
-                )
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao comunicar com serviço ML: {str(e)}")
+            if page_annotations and "annotations" in page_annotations:
+                for annotation in page_annotations["annotations"]:
+                    if annotation.get("type") == "produto":
+                        # Adicionar informação da página
+                        annotation["page_number"] = page_number
+                        annotation["image_url"] = f"/catalogs/{catalog_id}/pages/{page_number}/image"
+                        annotations.append(annotation)
+        
+        if annotations:
+            return {
+                "catalog_id": catalog_id,
+                "annotations": annotations
+            }
+    except Exception as e:
+        print(f"Erro ao buscar anotações manuais: {str(e)}")
+    
+    # Se chegou aqui, não encontrou nenhum resultado
+    raise HTTPException(
+        status_code=404,
+        detail=f"Detecções não encontradas para o catálogo {catalog_id}. Execute uma detecção primeiro."
+    )
 
 # Rotas de anotações
 @app.post("/annotations/", response_model=Dict[str, Any])

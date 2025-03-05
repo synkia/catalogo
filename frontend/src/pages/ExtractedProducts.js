@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Typography,
   Grid,
@@ -25,8 +25,9 @@ import {
   InputAdornment,
   Pagination,
   Slider,
+  Container,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SortIcon from '@mui/icons-material/Sort';
@@ -52,9 +53,16 @@ const buildImageUrl = (baseUrl, imagePath, catalogId, pageNumber) => {
     return imagePath;
   }
 
+  // Verificar e corrigir duplicação de '/api/'
+  let cleanImagePath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  
+  // Corrigir problema de duplicação de '/api/'
+  if (cleanImagePath.startsWith('/api/') && baseUrl.endsWith('/api')) {
+    cleanImagePath = cleanImagePath.substring(4); // Remove o '/api/' do início
+  }
+
   // Limpar URLs
   const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  const cleanImagePath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
 
   // Construir URL final
   const finalUrl = `${cleanBaseUrl}${cleanImagePath}`;
@@ -126,9 +134,8 @@ const ExtractedProducts = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [error, setError] = useState(null);
   const [catalogs, setCatalogs] = useState([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage] = useState(12);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 12;
   
   // Estados para filtros e busca
   const [searchTerm, setSearchTerm] = useState('');
@@ -148,6 +155,7 @@ const ExtractedProducts = () => {
       
       // 2. Para cada catálogo, buscar suas páginas e produtos
       const allProducts = [];
+      const catalogErrors = [];
       
       for (const catalog of catalogsResponse.data) {
         console.log('Processando catálogo:', catalog.catalog_id);
@@ -240,11 +248,29 @@ const ExtractedProducts = () => {
           }
         } catch (err) {
           console.error(`Erro ao buscar detecções do catálogo ${catalog.catalog_id}:`, err);
+          catalogErrors.push({
+            catalogId: catalog.catalog_id,
+            catalogName: catalog.filename || 'Catálogo sem nome',
+            error: err.response?.status === 404 ? 
+              'Não foram encontradas detecções para este catálogo.' : 
+              `Erro: ${err.response?.data?.detail || err.message || 'Erro desconhecido'}`
+          });
         }
       }
       
       console.log('Total de produtos encontrados:', allProducts.length);
       setProducts(allProducts);
+      
+      // Mostrar um alerta se não foram encontrados produtos
+      if (allProducts.length === 0) {
+        setError('Não foram encontrados produtos extraídos nos catálogos. Tente executar uma detecção de produtos primeiro ou fazer anotações manuais.');
+      } else if (catalogErrors.length > 0) {
+        // Se houve erros, mas pelo menos alguns produtos foram encontrados
+        setError(`Alguns catálogos não possuem produtos extraídos (${catalogErrors.length} catálogos com erro). Total de produtos carregados: ${allProducts.length}.`);
+      } else {
+        setError(null);
+      }
+      
       applyFilters(allProducts, searchTerm, selectedCatalog, confidenceFilter, sortOrder);
       
     } catch (err) {
@@ -275,13 +301,15 @@ const ExtractedProducts = () => {
   
   // Função para aplicar filtros e busca
   const applyFilters = (products, search, catalog, confidence, sort) => {
+    // Aplicar filtros aos produtos
     let filtered = [...products];
     
     // Filtrar por termo de busca
     if (search) {
+      const searchLower = search.toLowerCase();
       filtered = filtered.filter(product => 
-        product.catalogName.toLowerCase().includes(search.toLowerCase()) || 
-        product.id.toLowerCase().includes(search.toLowerCase())
+        product.id.toLowerCase().includes(searchLower) ||
+        (product.catalogName && product.catalogName.toLowerCase().includes(searchLower))
       );
     }
     
@@ -293,7 +321,7 @@ const ExtractedProducts = () => {
     // Filtrar por confiança
     filtered = filtered.filter(product => product.confidence >= confidence);
     
-    // Ordenar os resultados
+    // Ordenar
     switch (sort) {
       case 'confidence':
         filtered.sort((a, b) => b.confidence - a.confidence);
@@ -301,16 +329,15 @@ const ExtractedProducts = () => {
       case 'date':
         filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
         break;
-      case 'area':
-        filtered.sort((a, b) => b.bbox.x2 - b.bbox.x1);
+      case 'catalog':
+        filtered.sort((a, b) => a.catalogName.localeCompare(b.catalogName));
         break;
       default:
-        break;
+        filtered.sort((a, b) => b.confidence - a.confidence);
     }
     
     setFilteredProducts(filtered);
-    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-    setPage(1); // Voltar para a primeira página ao aplicar filtros
+    setCurrentPage(1); // Voltar para a primeira página ao aplicar filtros
   };
   
   // Handlers para os filtros
@@ -338,9 +365,11 @@ const ExtractedProducts = () => {
     applyFilters(products, searchTerm, selectedCatalog, confidenceFilter, value);
   };
   
-  // Handler para paginação
+  // Paginação
   const handlePageChange = (event, value) => {
-    setPage(value);
+    setCurrentPage(value);
+    // Rolar para o topo ao mudar de página
+    window.scrollTo(0, 0);
   };
   
   // Função para navegar para os detalhes do catálogo
@@ -348,258 +377,229 @@ const ExtractedProducts = () => {
     navigate(`/catalogs/${product.catalogId}?page=${product.pageNumber}&product=${product.id}`);
   };
   
-  // Calcular os produtos a serem exibidos na página atual
+  // Obter produtos para a página atual
   const getCurrentProducts = () => {
-    const start = (page - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    return filteredProducts.slice(start, end);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredProducts.slice(startIndex, endIndex);
   };
 
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12}>
-        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
-          <Link color="inherit" onClick={() => navigate('/')}>
-            Dashboard
-          </Link>
-          <Typography color="textPrimary">Produtos Extraídos</Typography>
-        </Breadcrumbs>
-        
-        <Typography variant="h4" gutterBottom>
-          Biblioteca de Produtos Extraídos
-        </Typography>
-        <Typography variant="subtitle1" color="textSecondary" paragraph>
-          Visualize e gerencie todos os produtos detectados nos seus catálogos
-        </Typography>
-      </Grid>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 8 }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Produtos Extraídos
+      </Typography>
       
-      {/* Filtros e busca */}
-      <Grid item xs={12}>
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Buscar produtos"
-                variant="outlined"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
-                <InputLabel id="catalog-filter-label">Catálogo</InputLabel>
-                <Select
-                  labelId="catalog-filter-label"
-                  value={selectedCatalog}
-                  onChange={handleCatalogChange}
-                  label="Catálogo"
-                >
-                  <MenuItem value="">Todos os Catálogos</MenuItem>
-                  {catalogs.map((catalog) => (
-                    <MenuItem key={catalog.catalog_id} value={catalog.catalog_id}>
-                      {catalog.filename}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
-                <InputLabel id="sort-filter-label">Ordenar por</InputLabel>
-                <Select
-                  labelId="sort-filter-label"
-                  value={sortOrder}
-                  onChange={handleSortChange}
-                  label="Ordenar por"
-                >
-                  <MenuItem value="confidence">Confiança (Maior primeiro)</MenuItem>
-                  <MenuItem value="date">Data de Detecção (Recentes primeiro)</MenuItem>
-                  <MenuItem value="area">Tamanho do Produto (Maior primeiro)</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="body2" sx={{ mr: 1, minWidth: '100px' }}>
-                  Confiança mínima: {confidenceFilter.toFixed(2)}
-                </Typography>
-                <Slider
-                  value={confidenceFilter}
-                  onChange={(e, value) => handleConfidenceChange({ target: { value } })}
-                  step={0.05}
-                  min={0}
-                  max={1}
-                />
-              </Box>
-            </Grid>
+      {/* Filtros */}
+      <Box sx={{ mb: 4 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              label="Buscar produto"
+              variant="outlined"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
           </Grid>
-        </Paper>
-      </Grid>
+          
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Catálogo</InputLabel>
+              <Select
+                value={selectedCatalog}
+                onChange={handleCatalogChange}
+                label="Catálogo"
+              >
+                <MenuItem value="">Todos os catálogos</MenuItem>
+                {catalogs.map(catalog => (
+                  <MenuItem key={catalog.catalog_id} value={catalog.catalog_id}>
+                    {catalog.filename || `Catálogo #${catalog.catalog_id.substring(0, 6)}`}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} sm={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Ordenar por</InputLabel>
+              <Select
+                value={sortOrder}
+                onChange={handleSortChange}
+                label="Ordenar por"
+              >
+                <MenuItem value="confidence">Confiança</MenuItem>
+                <MenuItem value="date">Data</MenuItem>
+                <MenuItem value="catalog">Catálogo</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} sm={3}>
+            <Box sx={{ width: '100%' }}>
+              <Typography id="confidence-slider" gutterBottom>
+                Confiança mínima: {confidenceFilter.toFixed(2)}
+              </Typography>
+              <Slider
+                value={confidenceFilter}
+                onChange={handleConfidenceChange}
+                aria-labelledby="confidence-slider"
+                step={0.05}
+                marks
+                min={0}
+                max={1}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(value) => `${(value * 100).toFixed(0)}%`}
+              />
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
       
-      {/* Status e contagem */}
-      <Grid item xs={12}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="subtitle1">
-            {filteredProducts.length} produtos encontrados
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+          <Typography variant="body1" sx={{ ml: 2 }}>
+            Carregando produtos...
+          </Typography>
+        </Box>
+      ) : error ? (
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+          
+          <Typography variant="h6" gutterBottom>
+            Como extrair produtos de um catálogo:
           </Typography>
           
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            onClick={() => alert('Funcionalidade para exportar resultados em desenvolvimento')}
-          >
-            Exportar Resultados
-          </Button>
-        </Box>
-      </Grid>
-      
-      {/* Mensagem de carregamento */}
-      {loading && (
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress />
+          <Box component="ol" sx={{ ml: 2 }}>
+            <Box component="li" sx={{ mb: 1 }}>
+              <Typography>
+                <strong>Faça upload de um catálogo</strong> na página <Link component={RouterLink} to="/catalogs">Catálogos</Link>.
+              </Typography>
+            </Box>
+            <Box component="li" sx={{ mb: 1 }}>
+              <Typography>
+                <strong>Faça anotações manuais</strong> de produtos usando a <Link component={RouterLink} to="/catalogs">ferramenta de anotação</Link> (clique em um catálogo e depois no botão "Anotar").
+              </Typography>
+            </Box>
+            <Box component="li" sx={{ mb: 1 }}>
+              <Typography>
+                <strong>Treine um modelo</strong> na página <Link component={RouterLink} to="/models">Modelos</Link> usando suas anotações manuais.
+              </Typography>
+            </Box>
+            <Box component="li" sx={{ mb: 1 }}>
+              <Typography>
+                <strong>Execute a detecção</strong> na página <Link component={RouterLink} to="/models">Modelos</Link> clicando no botão "Executar Detecção" e selecionando um catálogo.
+              </Typography>
+            </Box>
+            <Box component="li">
+              <Typography>
+                <strong>Volte para esta página</strong> para ver os produtos extraídos.
+              </Typography>
+            </Box>
           </Box>
-        </Grid>
-      )}
-      
-      {/* Mensagem de erro */}
-      {error && (
-        <Grid item xs={12}>
-          <Alert severity="error">{error}</Alert>
-        </Grid>
-      )}
-      
-      {/* Sem resultados */}
-      {!loading && filteredProducts.length === 0 && (
-        <Grid item xs={12}>
-          <Paper sx={{ p: 4, textAlign: 'center' }}>
-            <Typography variant="h6" color="textSecondary" gutterBottom>
-              Nenhum produto encontrado
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Tente ajustar os filtros ou realizar novas detecções nos seus catálogos.
-            </Typography>
-          </Paper>
-        </Grid>
-      )}
-      
-      {/* Grid de produtos */}
-      {!loading && filteredProducts.length > 0 && (
+        </Paper>
+      ) : products.length === 0 ? (
+        <Paper sx={{ p: 3 }}>
+          <Alert severity="info">
+            Nenhum produto encontrado com os filtros atuais.
+          </Alert>
+        </Paper>
+      ) : (
         <>
-          <Grid item xs={12}>
-            <Grid container spacing={3}>
-              {getCurrentProducts().map((product) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
-                  <Card 
+          {/* Grid de produtos */}
+          <Grid container spacing={3}>
+            {getCurrentProducts().map((product) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
+                <Card 
+                  sx={{ 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    transition: 'transform 0.3s, box-shadow 0.3s',
+                    '&:hover': {
+                      transform: 'translateY(-5px)',
+                      boxShadow: 6,
+                      cursor: 'pointer'
+                    }
+                  }}
+                  onClick={() => handleProductClick(product)}
+                >
+                  <CardMedia
+                    component="img"
+                    height="200"
+                    image={product.imageUrl}
+                    alt={`Produto ${product.id}`}
                     sx={{ 
-                      height: '100%', 
-                      display: 'flex', 
-                      flexDirection: 'column',
-                      transition: 'transform 0.2s',
-                      '&:hover': {
-                        transform: 'scale(1.02)',
-                        boxShadow: 6,
-                        cursor: 'pointer'
-                      }
+                      objectFit: 'contain',
+                      bgcolor: '#f5f5f5',
+                      borderBottom: '1px solid #eee'
                     }}
-                    onClick={() => handleProductClick(product)}
-                  >
-                    <Box sx={{ position: 'relative', pt: '100%', overflow: 'hidden', bgcolor: '#f5f5f5' }}>
-                      <CardMedia
-                        component="img"
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain',
-                          objectPosition: 'center',
-                          bgcolor: '#f5f5f5'
-                        }}
-                        image={product.imageUrl}
-                        alt={`Produto ${product.id}`}
-                        onError={(e) => {
-                          const placeholder = '/assets/placeholder-product.png';
-                          console.error('Erro ao carregar imagem do produto:', {
-                            src: e.target.src,
-                            produto: product.id,
-                            catálogo: product.catalogId
-                          });
-
-                          // Evitar loop infinito
-                          if (!e.target.src.includes(placeholder)) {
-                            console.log('Usando imagem placeholder para o produto');
-                            e.target.src = placeholder;
-                          }
-                          e.target.onerror = null; // Evitar novos erros
-                        }}
-                      />
-                      <Box position="absolute" bottom={2} left={2} zIndex={1}>
-                        <ImageAvailabilityTest url={product.imageUrl} />
-                      </Box>
-                      
-                      <Chip
-                        label={`${(product.confidence * 100).toFixed(0)}%`}
-                        color={product.confidence > 0.8 ? 'success' : product.confidence > 0.6 ? 'primary' : 'warning'}
-                        size="small"
+                    onError={(e) => {
+                      console.error('Erro ao carregar imagem do produto:', e.target.src);
+                      e.target.onerror = null;
+                      e.target.src = '/placeholder-error.png';
+                    }}
+                  />
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="subtitle1" component="div" gutterBottom>
+                      Produto #{product.id.substring(0, 8)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" component="div">
+                      <strong>Catálogo:</strong> {getCatalogName(product.catalogId, catalogs)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" component="div">
+                      <strong>Página:</strong> {product.pageNumber}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" component="div">
+                      <strong>Confiança:</strong> {(product.confidence * 100).toFixed(1)}%
+                    </Typography>
+                    <Box 
+                      sx={{ 
+                        mt: 1, 
+                        width: '100%', 
+                        height: 8, 
+                        bgcolor: '#f0f0f0',
+                        borderRadius: 1,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <Box 
                         sx={{ 
-                          position: 'absolute', 
-                          top: 8, 
-                          right: 8,
-                          fontWeight: 'bold'
+                          width: `${product.confidence * 100}%`, 
+                          height: '100%', 
+                          bgcolor: product.confidence > 0.7 ? 'success.main' : 
+                                  product.confidence > 0.4 ? 'warning.main' : 'error.main'
                         }}
                       />
                     </Box>
-                    <CardContent sx={{ flexGrow: 1 }}>
-                      <Typography variant="subtitle2" component="div" noWrap>
-                        ID: {product.id}
-                      </Typography>
-                      
-                      <Typography variant="body2" color="text.secondary" noWrap>
-                        Catálogo: {product.catalogName}
-                      </Typography>
-                      
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Página {product.pageNumber}
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                        <ShoppingCartIcon fontSize="small" color="action" sx={{ mr: 1 }} />
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(product.date).toLocaleDateString()}
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
           
           {/* Paginação */}
-          {totalPages > 1 && (
-            <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+          {filteredProducts.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
               <Pagination 
-                count={totalPages} 
-                page={page} 
-                onChange={handlePageChange} 
-                color="primary" 
-                showFirstButton 
-                showLastButton
+                count={Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)} 
+                page={currentPage} 
+                onChange={handlePageChange}
+                color="primary"
+                size="large"
               />
-            </Grid>
+            </Box>
           )}
         </>
       )}
@@ -673,7 +673,7 @@ const ExtractedProducts = () => {
           </Grid>
         </Grid>
       </Paper>
-    </Grid>
+    </Container>
   );
 };
 

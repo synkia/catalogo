@@ -101,8 +101,15 @@ const CatalogDetail = () => {
   };
   
   // URL da imagem da página atual
-  const currentImageUrl = pages.length > 0 && currentPage <= pages.length 
-    ? `${api.defaults.baseURL}/catalogs/${catalogId}/pages/${currentPage}/image` 
+  let imagePath = pages.length > 0 && currentPage <= pages.length 
+    ? `/catalogs/${catalogId}/pages/${currentPage}/image` 
+    : null;
+  
+  // Construir URL correta para a imagem
+  const currentImageUrl = imagePath 
+    ? (api.defaults.baseURL.endsWith('/api') && imagePath.startsWith('/api/'))
+      ? `${api.defaults.baseURL}${imagePath.substring(4)}` // Remove a duplicação do '/api/'
+      : `${api.defaults.baseURL}${imagePath}`
     : null;
   
   if (loading) {
@@ -238,8 +245,9 @@ const CatalogDetail = () => {
                     alt={`Página ${currentPage} do catálogo`} 
                     style={{ maxWidth: '100%', maxHeight: '60vh' }}
                     onError={(e) => {
+                      console.error('Erro ao carregar imagem:', currentImageUrl);
                       e.target.onerror = null;
-                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iI2YxZjFmMSIvPjx0ZXh0IHg9IjQwMCIgeT0iMzAwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjBweCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSI+RXJybyBhbyBjYXJyZWdhciBpbWFnZW08L3RleHQ+PC9zdmc+';
+                      e.target.src = '/placeholder-error.png';
                     }}
                   />
                 )}
