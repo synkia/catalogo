@@ -69,6 +69,14 @@ const TrainingDashboard = () => {
   const [pollingInterval, setPollingInterval] = useState(null);
   const [error, setError] = useState(null);
   
+  // Monitorar mudanças no jobStatus
+  useEffect(() => {
+    if (jobStatus) {
+      console.log('jobStatus atualizado:', jobStatus);
+      console.log('Valores de train_size e val_size:', jobStatus.train_size, jobStatus.val_size);
+    }
+  }, [jobStatus]);
+  
   // Passos do processo de treinamento
   const steps = ['Selecionar Catálogos', 'Configurar Treinamento', 'Executar e Monitorar'];
   
@@ -175,7 +183,7 @@ const TrainingDashboard = () => {
       // Preparar payload para a API
       const payload = {
         ...trainingConfig,
-        catalog_ids: selectedCatalogs
+        catalog_ids: selectedCatalogs.length > 0 ? selectedCatalogs : ["simulate_annotations"]
       };
       
       console.log('Enviando payload para API:', payload);
@@ -221,7 +229,19 @@ const TrainingDashboard = () => {
       const response = await api.get(`/train/status/${id}`);
       
       if (response && response.data) {
-        setJobStatus(response.data);
+        console.log('Dados recebidos da API:', response.data);
+        console.log('Valores específicos - train_size:', response.data.train_size, 'val_size:', response.data.val_size);
+        console.log('Tipo de dados - train_size:', typeof response.data.train_size, 'val_size:', typeof response.data.val_size);
+        
+        // Processar os dados para garantir que train_size e val_size sejam números
+        const processedData = {
+          ...response.data,
+          train_size: Number(response.data.train_size) || 0,
+          val_size: Number(response.data.val_size) || 0
+        };
+        
+        console.log('Dados processados:', processedData);
+        setJobStatus(processedData);
         
         // Se o treinamento terminou (completado, com erro ou falhou), parar o polling
         if (['completed', 'error', 'failed'].includes(response.data.status)) {
@@ -368,9 +388,7 @@ const TrainingDashboard = () => {
                   ))}
                 </Select>
                 <FormHelperText>
-                  <Typography color="textSecondary">
-                    Selecione um ou mais catálogos para treinamento.
-                  </Typography>
+                  Selecione um ou mais catálogos para treinamento.
                 </FormHelperText>
               </FormControl>
             )}
@@ -651,9 +669,10 @@ const TrainingDashboard = () => {
                     <ListItemIcon>
                       <DatasetIcon />
                     </ListItemIcon>
+                    {console.log('Valores antes de renderizar:', jobStatus)}
                     <ListItemText 
                       primary="Dataset" 
-                      secondary={`${jobStatus.train_size || '?'} imagens para treino, ${jobStatus.val_size || '?'} para validação`} 
+                      secondary={`${jobStatus.train_size >= 0 ? jobStatus.train_size : '?'} imagens para treino, ${jobStatus.val_size >= 0 ? jobStatus.val_size : '?'} para validação`} 
                     />
                   </ListItem>
                   

@@ -78,8 +78,17 @@ const ModelList = () => {
       // Buscar modelos
       const modelsResponse = await api.get('/models');
       
+      // Garantir que train_size e val_size sejam números
+      const processedModels = modelsResponse.data.map(model => ({
+        ...model,
+        train_size: Number(model.train_size) || 0,
+        val_size: Number(model.val_size) || 0
+      }));
+      
+      console.log('Modelos processados:', processedModels);
+      
       // Ordenar modelos por data de criação (mais recentes primeiro)
-      const sortedModels = [...modelsResponse.data].sort((a, b) => {
+      const sortedModels = [...processedModels].sort((a, b) => {
         return new Date(b.created_at) - new Date(a.created_at);
       });
       
@@ -335,9 +344,11 @@ const ModelList = () => {
             Treinar Novo Modelo
           </Button>
           <Tooltip title="Atualizar lista">
-            <IconButton onClick={fetchData} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
+            <span>
+              <IconButton onClick={fetchData} disabled={loading}>
+                <RefreshIcon />
+              </IconButton>
+            </span>
           </Tooltip>
         </div>
       </Grid>
@@ -395,7 +406,7 @@ const ModelList = () => {
                     <TableCell>{model.name || `Modelo ${model.model_id.slice(0, 8)}`}</TableCell>
                     <TableCell>{formatDate(model.created_at)}</TableCell>
                     <TableCell>{formatBaseModel(model.config?.base_model)}</TableCell>
-                    <TableCell>{`${model.train_size || '?'} treino / ${model.val_size || '?'} validação`}</TableCell>
+                    <TableCell>{`${model.train_size} treino / ${model.val_size} validação`}</TableCell>
                     <TableCell>
                       {model.status === 'training' ? (
                         <>
