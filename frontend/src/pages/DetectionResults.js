@@ -38,10 +38,11 @@ import SaveIcon from '@mui/icons-material/Save';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ShareIcon from '@mui/icons-material/Share';
 import axios from 'axios';
+import { API_URL } from '../utils/apiConfig';
 
 // Configuração do Axios
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  baseURL: API_URL,
 });
 
 // Componente de imagem com anotações
@@ -106,7 +107,7 @@ const AnnotatedImage = ({ image, annotations, onAnnotationClick, confidenceThres
   // Construir a URL completa da imagem
   const imageUrl = image.startsWith('http') 
     ? image 
-    : `${process.env.REACT_APP_API_URL || 'http://localhost:8001'}${image}`;
+    : `${API_URL}${image}`;
   console.log('URL da imagem construída:', { original: image, final: imageUrl });
   
   return (
@@ -322,7 +323,7 @@ const DetectionResults = () => {
         const imagePath = page.image_path || page.image_url;
         const imageUrl = imagePath.startsWith('http') 
           ? imagePath 
-          : `${process.env.REACT_APP_API_URL || 'http://localhost:8001'}${imagePath}`;
+          : `${API_URL}${imagePath}`;
         
         exportData.products.push({
           id: anno.id,
@@ -908,4 +909,4 @@ const DetectionResults = () => {
   );
 };
 
-export default DetectionResults; 
+export default DetectionResults;    

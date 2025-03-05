@@ -18,10 +18,11 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import ModelTrainingIcon from '@mui/icons-material/Psychology';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import axios from 'axios';
+import { API_URL } from '../utils/apiConfig';
 
 // Configuração do Axios
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  baseURL: API_URL,
 });
 
 const Dashboard = () => {
@@ -279,4 +280,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;    

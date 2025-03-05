@@ -37,10 +37,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import InfoIcon from '@mui/icons-material/Info';
 import axios from 'axios';
+import { API_URL } from '../utils/apiConfig';
 
 // Configuração do Axios
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  baseURL: API_URL,
 });
 
 const ModelList = () => {
@@ -874,4 +875,4 @@ const ModelList = () => {
   );
 };
 
-export default ModelList; 
+export default ModelList;  

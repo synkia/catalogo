@@ -34,8 +34,7 @@ import {
   Colorize as ColorizeIcon
 } from '@mui/icons-material';
 import { v4 as uuidv4 } from 'uuid';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8001';
+import { API_URL } from '../utils/apiConfig';
 
 // Componente de retângulo selecionável
 const Rectangle = ({ shapeProps, isSelected, onSelect, onChange, annotationType }) => {
@@ -806,4 +805,4 @@ const AnnotationTool = () => {
   );
 };
 
-export default AnnotationTool; 
+export default AnnotationTool;  

@@ -39,10 +39,11 @@ import DatasetIcon from '@mui/icons-material/Dataset';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import axios from 'axios';
+import { API_URL } from '../utils/apiConfig';
 
 // Configuração do Axios
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  baseURL: API_URL,
 });
 
 const TrainingDashboard = () => {
@@ -777,4 +778,4 @@ const TrainingDashboard = () => {
   );
 };
 
-export default TrainingDashboard; 
+export default TrainingDashboard;  

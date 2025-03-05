@@ -24,10 +24,11 @@ import ModelTrainingIcon from '@mui/icons-material/Psychology';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import InfoIcon from '@mui/icons-material/Info';
 import axios from 'axios';
+import { API_URL } from '../utils/apiConfig';
 
 // Configuração do Axios
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  baseURL: API_URL,
 });
 
 const CatalogDetail = () => {
@@ -321,4 +322,4 @@ const CatalogDetail = () => {
   );
 };
 
-export default CatalogDetail; 
+export default CatalogDetail;  

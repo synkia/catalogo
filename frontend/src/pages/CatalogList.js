@@ -32,10 +32,11 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import axios from 'axios';
+import { API_URL } from '../utils/apiConfig';
 
 // Configuração do Axios
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  baseURL: API_URL,
 });
 
 const CatalogList = () => {
@@ -309,9 +310,11 @@ const CatalogList = () => {
             Adicionar Catálogo
           </Button>
           <Tooltip title="Atualizar lista">
-            <IconButton onClick={fetchCatalogs} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
+            <span>
+              <IconButton onClick={fetchCatalogs} disabled={loading}>
+                <RefreshIcon />
+              </IconButton>
+            </span>
           </Tooltip>
         </div>
       </Grid>
@@ -373,22 +376,26 @@ const CatalogList = () => {
                     <TableCell align="center">{formatDate(catalog.upload_date)}</TableCell>
                     <TableCell align="center">
                       <Tooltip title="Visualizar">
-                        <IconButton 
-                          color="primary"
-                          onClick={() => navigate(`/catalogs/${catalog.catalog_id}`)}
-                          disabled={catalog.status !== 'ready'}
-                        >
-                          <VisibilityIcon />
-                        </IconButton>
+                        <span>
+                          <IconButton 
+                            color="primary"
+                            onClick={() => navigate(`/catalogs/${catalog.catalog_id}`)}
+                            disabled={catalog.status !== 'ready'}
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                       <Tooltip title="Anotar">
-                        <IconButton 
-                          color="secondary"
-                          onClick={() => navigate(`/annotate/${catalog.catalog_id}/1`)}
-                          disabled={catalog.status !== 'ready'}
-                        >
-                          <EditIcon />
-                        </IconButton>
+                        <span>
+                          <IconButton 
+                            color="secondary"
+                            onClick={() => navigate(`/annotate/${catalog.catalog_id}/1`)}
+                            disabled={catalog.status !== 'ready'}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                       <Tooltip title="Excluir">
                         <IconButton 
@@ -574,4 +581,4 @@ const CatalogList = () => {
   );
 };
 
-export default CatalogList; 
+export default CatalogList;        

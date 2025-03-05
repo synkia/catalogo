@@ -33,10 +33,11 @@ import SortIcon from '@mui/icons-material/Sort';
 import DownloadIcon from '@mui/icons-material/Download';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import axios from 'axios';
+import { API_URL } from '../utils/apiConfig';
 
 // Configuração do Axios
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  baseURL: API_URL,
 });
 
 // Função para validar e construir URLs de imagem
@@ -135,126 +136,127 @@ const ExtractedProducts = () => {
   const [confidenceFilter, setConfidenceFilter] = useState(0.5);
   const [sortOrder, setSortOrder] = useState('confidence');
   
+  // Função para buscar todos os produtos
+  const fetchAllProducts = async () => {
+    try {
+      setLoading(true);
+      
+      // 1. Buscar todos os catálogos para referência
+      const catalogsResponse = await api.get('/catalogs/');
+      console.log('Catálogos encontrados:', catalogsResponse.data);
+      setCatalogs(catalogsResponse.data);
+      
+      // 2. Para cada catálogo, buscar suas páginas e produtos
+      const allProducts = [];
+      
+      for (const catalog of catalogsResponse.data) {
+        console.log('Processando catálogo:', catalog.catalog_id);
+        
+        try {
+          // Buscar detecções do catálogo
+          const detectionResponse = await api.get(`/catalogs/${catalog.catalog_id}/detection`);
+          console.log('Resposta completa da API:', {
+            catalog_id: catalog.catalog_id,
+            data: detectionResponse.data,
+            status: detectionResponse.status
+          });
+          
+          if (detectionResponse.data && detectionResponse.data.annotations) {
+            // Processar as anotações em paralelo com promessas
+            const productPromises = detectionResponse.data.annotations
+              .filter(annotation => annotation.type === 'produto')
+              .map(async (annotation, index) => {
+                // Gerar URLs possíveis para a imagem
+                
+                // 1. URL direta da anotação (se disponível)
+                const annotationUrl = annotation.image_url 
+                  ? buildImageUrl(
+                      API_URL,
+                      annotation.image_url,
+                      catalog.catalog_id,
+                      annotation.page_number
+                    )
+                  : null;
+                  
+                // 2. URL baseada na estrutura do catálogo
+                const catalogPageUrl = buildImageUrl(
+                  API_URL,
+                  `/catalogs/${catalog.catalog_id}/pages/${annotation.page_number}/image`,
+                  catalog.catalog_id,
+                  annotation.page_number
+                );
+                
+                // 3. URL de fallback para arquivo PDF
+                const fallbackUrl = catalog.filename && catalog.filename.endsWith('.pdf')
+                  ? buildImageUrl(
+                      API_URL,
+                      `/files/${catalog.filename.replace('.pdf', '')}_page_${annotation.page_number}.jpg`,
+                      catalog.catalog_id,
+                      annotation.page_number
+                    )
+                  : null;
+                
+                // Testar todas as URLs e usar a primeira válida
+                let workingImageUrl = null;
+                
+                // Primeiro, tente a URL da anotação
+                if (annotationUrl && await testImageUrl(annotationUrl)) {
+                  workingImageUrl = annotationUrl;
+                  console.log('URL da anotação funcionando:', annotationUrl);
+                } 
+                // Em seguida, tente a URL da página do catálogo
+                else if (await testImageUrl(catalogPageUrl)) {
+                  workingImageUrl = catalogPageUrl;
+                  console.log('URL da página do catálogo funcionando:', catalogPageUrl);
+                }
+                // Por último, tente a URL de fallback
+                else if (fallbackUrl && await testImageUrl(fallbackUrl)) {
+                  workingImageUrl = fallbackUrl;
+                  console.log('URL de fallback funcionando:', fallbackUrl);
+                }
+                // Se nenhuma funcionar, use o placeholder
+                else {
+                  workingImageUrl = '/assets/placeholder-product.png';
+                  console.log('Nenhuma URL funcionou, usando placeholder');
+                }
+                
+                return {
+                  id: `${catalog.catalog_id}_${annotation.page_number}_${index}`,
+                  catalogId: catalog.catalog_id,
+                  catalogName: catalog.filename || 'Catálogo sem nome',
+                  pageNumber: annotation.page_number,
+                  confidence: annotation.confidence,
+                  bbox: annotation.bbox,
+                  imageUrl: workingImageUrl,
+                  date: catalog.created_at
+                };
+              });
+              
+            // Aguardar todas as promessas e adicionar os produtos à lista
+            const catalogProducts = await Promise.all(productPromises);
+            allProducts.push(...catalogProducts);
+            
+            console.log(`Encontrados ${catalogProducts.length} produtos no catálogo ${catalog.catalog_id}`);
+          }
+        } catch (err) {
+          console.error(`Erro ao buscar detecções do catálogo ${catalog.catalog_id}:`, err);
+        }
+      }
+      
+      console.log('Total de produtos encontrados:', allProducts.length);
+      setProducts(allProducts);
+      applyFilters(allProducts, searchTerm, selectedCatalog, confidenceFilter, sortOrder);
+      
+    } catch (err) {
+      console.error('Erro ao buscar produtos:', err);
+      setError('Não foi possível carregar os produtos. Tente novamente mais tarde.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Buscar dados iniciais
   useEffect(() => {
-    const fetchAllProducts = async () => {
-      try {
-        setLoading(true);
-        
-        // 1. Buscar todos os catálogos para referência
-        const catalogsResponse = await api.get('/catalogs/');
-        console.log('Catálogos encontrados:', catalogsResponse.data);
-        setCatalogs(catalogsResponse.data);
-        
-        // 2. Para cada catálogo, buscar suas páginas e produtos
-        const allProducts = [];
-        
-        for (const catalog of catalogsResponse.data) {
-          console.log('Processando catálogo:', catalog.catalog_id);
-          
-          try {
-            // Buscar detecções do catálogo
-            const detectionResponse = await api.get(`/catalogs/${catalog.catalog_id}/detection`);
-            console.log('Resposta completa da API:', {
-              catalog_id: catalog.catalog_id,
-              data: detectionResponse.data,
-              status: detectionResponse.status
-            });
-            
-            if (detectionResponse.data && detectionResponse.data.annotations) {
-              // Processar as anotações em paralelo com promessas
-              const productPromises = detectionResponse.data.annotations
-                .filter(annotation => annotation.type === 'produto')
-                .map(async (annotation, index) => {
-                  // Gerar URLs possíveis para a imagem
-                  
-                  // 1. URL direta da anotação (se disponível)
-                  const annotationUrl = annotation.image_url 
-                    ? buildImageUrl(
-                        process.env.REACT_APP_API_URL || 'http://localhost:8001',
-                        annotation.image_url,
-                        catalog.catalog_id,
-                        annotation.page_number
-                      )
-                    : null;
-                    
-                  // 2. URL baseada na estrutura do catálogo
-                  const catalogPageUrl = buildImageUrl(
-                    process.env.REACT_APP_API_URL || 'http://localhost:8001',
-                    `/catalogs/${catalog.catalog_id}/pages/${annotation.page_number}/image`,
-                    catalog.catalog_id,
-                    annotation.page_number
-                  );
-                  
-                  // 3. URL de fallback para arquivo PDF
-                  const fallbackUrl = catalog.filename && catalog.filename.endsWith('.pdf')
-                    ? buildImageUrl(
-                        process.env.REACT_APP_API_URL || 'http://localhost:8001',
-                        `/files/${catalog.filename.replace('.pdf', '')}_page_${annotation.page_number}.jpg`,
-                        catalog.catalog_id,
-                        annotation.page_number
-                      )
-                    : null;
-                  
-                  // Testar todas as URLs e usar a primeira válida
-                  let workingImageUrl = null;
-                  
-                  // Primeiro, tente a URL da anotação
-                  if (annotationUrl && await testImageUrl(annotationUrl)) {
-                    workingImageUrl = annotationUrl;
-                    console.log('URL da anotação funcionando:', annotationUrl);
-                  } 
-                  // Em seguida, tente a URL da página do catálogo
-                  else if (await testImageUrl(catalogPageUrl)) {
-                    workingImageUrl = catalogPageUrl;
-                    console.log('URL da página do catálogo funcionando:', catalogPageUrl);
-                  }
-                  // Por último, tente a URL de fallback
-                  else if (fallbackUrl && await testImageUrl(fallbackUrl)) {
-                    workingImageUrl = fallbackUrl;
-                    console.log('URL de fallback funcionando:', fallbackUrl);
-                  }
-                  // Se nenhuma funcionar, use o placeholder
-                  else {
-                    workingImageUrl = '/assets/placeholder-product.png';
-                    console.log('Nenhuma URL funcionou, usando placeholder');
-                  }
-                  
-                  return {
-                    id: `${catalog.catalog_id}_${annotation.page_number}_${index}`,
-                    catalogId: catalog.catalog_id,
-                    catalogName: catalog.filename || 'Catálogo sem nome',
-                    pageNumber: annotation.page_number,
-                    confidence: annotation.confidence,
-                    bbox: annotation.bbox,
-                    imageUrl: workingImageUrl,
-                    date: catalog.created_at
-                  };
-                });
-                
-              // Aguardar todas as promessas e adicionar os produtos à lista
-              const catalogProducts = await Promise.all(productPromises);
-              allProducts.push(...catalogProducts);
-              
-              console.log(`Encontrados ${catalogProducts.length} produtos no catálogo ${catalog.catalog_id}`);
-            }
-          } catch (err) {
-            console.error(`Erro ao buscar detecções do catálogo ${catalog.catalog_id}:`, err);
-          }
-        }
-        
-        console.log('Total de produtos encontrados:', allProducts.length);
-        setProducts(allProducts);
-        applyFilters(allProducts, searchTerm, selectedCatalog, confidenceFilter, sortOrder);
-        
-      } catch (err) {
-        console.error('Erro ao buscar produtos:', err);
-        setError('Não foi possível carregar os produtos. Tente novamente mais tarde.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchAllProducts();
   }, []); // Sem dependências para carregar apenas uma vez
 
@@ -615,7 +617,7 @@ const ExtractedProducts = () => {
               variant="outlined"
               size="small"
               id="debug-url"
-              defaultValue={`${process.env.REACT_APP_API_URL || 'http://localhost:8001'}/catalogs/`}
+              defaultValue={`${API_URL}/catalogs/`}
             />
           </Grid>
           <Grid item xs={12} md={8}>
@@ -675,4 +677,4 @@ const ExtractedProducts = () => {
   );
 };
 
-export default ExtractedProducts; 
+export default ExtractedProducts;      
