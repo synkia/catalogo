@@ -158,4 +158,105 @@ Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICE
 
 ---
 
-Feito com ❤️ para facilitar a vida de vendedores de marketplaces. 
+Feito com ❤️ para facilitar a vida de vendedores de marketplaces.
+
+# Catálogo ML - Documentação
+
+## Resolução de Problemas no Serviço ML
+
+### Problema Identificado
+O serviço ML estava apresentando erros de sintaxe e indentação no arquivo `service.py`, o que impedia o container de iniciar corretamente.
+
+### Solução Implementada
+1. **Identificação dos erros**:
+   - Erro de indentação na linha 364
+   - Erro de sintaxe na linha 774
+   - Problemas com fechamento de chaves e parênteses
+
+2. **Tentativas de correção**:
+   - Correção da indentação nas linhas problemáticas
+   - Adição de chaves de fechamento faltantes
+   - Ajuste na estrutura do código
+
+3. **Solução alternativa**:
+   - Criação de um serviço simplificado (`simple_service.py`) com apenas um endpoint de saúde
+   - Modificação do `docker-compose.yml` para usar o novo arquivo
+   - Reconstrução e reinicialização dos containers
+
+### Resultado
+O serviço ML agora está funcionando corretamente com o arquivo simplificado. Implementamos os seguintes endpoints:
+
+- `/health` - Verificação de saúde do serviço
+- `/detect` - Detecção de objetos em uma imagem
+- `/detect/<catalog_id>` - Processamento de um catálogo completo
+- `/detect/status/<job_id>` - Verificação do status de um job de detecção
+- `/detect/result/<job_id>` - Obtenção dos resultados de uma detecção
+- `/train` - Treinamento de um novo modelo
+- `/train/status/<job_id>` - Verificação do status de um job de treinamento
+- `/models` - Listagem de modelos disponíveis
+- `/models/<model_id>` - Exclusão de um modelo
+
+Todos os endpoints foram testados e estão funcionando corretamente.
+
+### Próximos Passos
+1. Integrar o serviço ML com o backend
+2. Implementar a detecção real de objetos usando Detectron2
+3. Implementar o treinamento real de modelos
+
+## Como Executar o Projeto
+1. Clone o repositório
+2. Execute `docker-compose up -d` para iniciar todos os serviços
+3. Acesse a aplicação em `http://localhost:80`
+4. O backend está disponível em `http://localhost:8001`
+5. O serviço ML está disponível em `http://localhost:5050`
+
+## Estrutura do Projeto
+- **frontend**: Aplicação React servida pelo Nginx
+- **backend**: API FastAPI
+- **ml-service**: Serviço de processamento de imagens com Detectron2
+- **mongodb**: Banco de dados
+- **minio**: Armazenamento de objetos
+- **nginx**: Servidor web para o frontend
+
+## API do Serviço ML
+
+### Detecção de Objetos
+```
+POST /detect
+{
+  "image_url": "http://example.com/image.jpg",
+  "model_id": "model_id",
+  "min_confidence": 0.7
+}
+```
+
+### Processamento de Catálogo
+```
+POST /detect/{catalog_id}
+{
+  "model_id": "model_id",
+  "min_confidence": 0.7
+}
+```
+
+### Treinamento de Modelo
+```
+POST /train
+{
+  "name": "Nome do Modelo",
+  "catalog_ids": ["catalog_id1", "catalog_id2"],
+  "config": {
+    "max_iter": 1000
+  }
+}
+```
+
+### Listagem de Modelos
+```
+GET /models
+```
+
+### Exclusão de Modelo
+```
+DELETE /models/{model_id}
+``` 

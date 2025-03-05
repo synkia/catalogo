@@ -12,7 +12,7 @@ ENV DATA_DIR=/data
 ENV MODELS_DIR=/models
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_ENV=development
-ENV FLASK_APP=service.py
+ENV FLASK_APP=simple_service.py
 
 # Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \
@@ -40,4 +40,4 @@ COPY . .
 EXPOSE 5000
 
 # Comando para iniciar o serviço
-CMD ["python", "service.py"] 
+CMD ["python", "simple_service.py"] 

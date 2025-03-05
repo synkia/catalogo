@@ -356,18 +356,18 @@ def run_training(job_id, model_name, catalog_ids, config):
             d2["register_coco_instances"](f"val_{job_id}", {}, "/tmp/val.json", val_dir)
             
             # Obter URLs e caminhos para o modelo
-            backend_url = os.environ.get("BACKEND_URL", "http://backend:8000")
-            models_dir = os.environ.get("MODELS_DIR", "/models")
-            data_dir = os.environ.get("DATA_DIR", "/data")
+        backend_url = os.environ.get("BACKEND_URL", "http://backend:8000")
+        models_dir = os.environ.get("MODELS_DIR", "/models")
+        data_dir = os.environ.get("DATA_DIR", "/data")
             
-            # Criar diretório para o modelo
-            model_id = training_jobs[job_id]["model_id"]
-            model_dir = os.path.join(models_dir, model_id)
-            os.makedirs(model_dir, exist_ok=True)
-            
-            # Atualizar train_size e val_size no modelo em models_db
-            for model in models_db:
-                if model.get("job_id") == job_id:
+        # Criar diretório para o modelo
+        model_id = training_jobs[job_id]["model_id"]
+        model_dir = os.path.join(models_dir, model_id)
+        os.makedirs(model_dir, exist_ok=True)
+        
+        # Atualizar train_size e val_size no modelo em models_db
+        for model in models_db:
+            if model.get("job_id") == job_id:
                     model["train_size"] = len(train_dataset)
                     model["val_size"] = len(val_dataset)
                     model["status"] = "completed"
@@ -771,10 +771,10 @@ def get_training_status(job_id):
                     "eta": eta,
                     "log": log
                 }
-            })
+        })
         else:
             print(f"Modelo não encontrado para job_id: {job_id}")
-            # Retornar as informações básicas do job
+        # Retornar as informações básicas do job
         return jsonify({
                 "status": job_info.get("status", "unknown"),
                 "error": job_info.get("error"),
