@@ -30,6 +30,37 @@ const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
 });
 
+// Log da URL da API para depuração
+console.log('API URL:', process.env.REACT_APP_API_URL || 'http://localhost:8001');
+
+// Função para validar e construir URLs de imagem
+const buildImageUrl = (baseUrl, imagePath) => {
+  if (!imagePath) {
+    console.log('Caminho da imagem não fornecido');
+    return null;
+  }
+
+  // Se já for uma URL completa, retornar
+  if (imagePath.startsWith('http')) {
+    return imagePath;
+  }
+
+  // Limpar URLs
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  const cleanImagePath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+
+  // Construir URL final
+  const finalUrl = `${cleanBaseUrl}${cleanImagePath}`;
+  
+  console.log('URL construída:', {
+    baseUrl: cleanBaseUrl,
+    imagePath: cleanImagePath,
+    finalUrl
+  });
+
+  return finalUrl;
+};
+
 const CatalogDetail = () => {
   const navigate = useNavigate();
   const { catalogId } = useParams();
@@ -101,8 +132,10 @@ const CatalogDetail = () => {
   
   // URL da imagem da página atual
   const currentImageUrl = pages.length > 0 && currentPage <= pages.length 
-    ? `${api.defaults.baseURL}/catalogs/${catalogId}/pages/${currentPage}/image` 
+    ? buildImageUrl(api.defaults.baseURL, `/catalogs/${catalogId}/pages/${currentPage}/image`) 
     : null;
+  
+  console.log('URL da imagem atual:', currentImageUrl);
   
   if (loading) {
     return (

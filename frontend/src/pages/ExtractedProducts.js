@@ -39,6 +39,9 @@ const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
 });
 
+// Log da URL da API para depuração
+console.log('API URL (ExtractedProducts):', process.env.REACT_APP_API_URL || 'http://localhost:8001');
+
 // Função para validar e construir URLs de imagem
 const buildImageUrl = (baseUrl, imagePath, catalogId, pageNumber) => {
   if (!imagePath) {
@@ -135,25 +138,24 @@ const ExtractedProducts = () => {
   const [confidenceFilter, setConfidenceFilter] = useState(0.5);
   const [sortOrder, setSortOrder] = useState('confidence');
   
-  // Buscar dados iniciais
-  useEffect(() => {
-    const fetchAllProducts = async () => {
-      try {
-        setLoading(true);
+  // Função para buscar todos os produtos
+  const fetchAllProducts = async () => {
+    try {
+      setLoading(true);
+      
+      // 1. Buscar todos os catálogos para referência
+      const catalogsResponse = await api.get('/catalogs/');
+      console.log('Catálogos encontrados:', catalogsResponse.data);
+      setCatalogs(catalogsResponse.data);
+      
+      // 2. Para cada catálogo, buscar suas páginas e produtos
+      const allProducts = [];
+      
+      for (const catalog of catalogsResponse.data) {
+        console.log('Processando catálogo:', catalog.catalog_id);
         
-        // 1. Buscar todos os catálogos para referência
-        const catalogsResponse = await api.get('/catalogs/');
-        console.log('Catálogos encontrados:', catalogsResponse.data);
-        setCatalogs(catalogsResponse.data);
-        
-        // 2. Para cada catálogo, buscar suas páginas e produtos
-        const allProducts = [];
-        
-        for (const catalog of catalogsResponse.data) {
-          console.log('Processando catálogo:', catalog.catalog_id);
-          
-          try {
-            // Buscar detecções do catálogo
+        try {
+          // Buscar detecções do catálogo
             const detectionResponse = await api.get(`/catalogs/${catalog.catalog_id}/detection`);
             console.log('Resposta completa da API:', {
               catalog_id: catalog.catalog_id,
@@ -255,6 +257,8 @@ const ExtractedProducts = () => {
       }
     };
     
+  // Buscar dados iniciais
+  useEffect(() => {
     fetchAllProducts();
   }, []); // Sem dependências para carregar apenas uma vez
 

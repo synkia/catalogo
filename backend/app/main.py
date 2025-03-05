@@ -45,7 +45,15 @@ app = FastAPI(
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://localhost:50029", 
+        "http://localhost:55825",
+        "http://191.252.110.108:3000",
+        "http://191.252.110.108:50029",
+        "http://191.252.110.108:55825",
+        "http://191.252.110.108"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,9 +69,63 @@ os.makedirs(f"{DATA_DIR}/uploads", exist_ok=True)
 os.makedirs(f"{DATA_DIR}/images", exist_ok=True)
 os.makedirs(f"{DATA_DIR}/annotations", exist_ok=True)
 
-# Conexão com o MongoDB
-client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI)
-db = client.catalogo_db
+# Conexão com o MongoDB (com tratamento de erro)
+USE_MOCK_DB = os.getenv("USE_MOCK_DB", "false").lower() == "true"
+
+if not USE_MOCK_DB:
+    try:
+        client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        # Verificar a conexão
+        client.admin.command('ping')
+        db = client.catalogo_db
+        print("✅ Conexão com MongoDB estabelecida com sucesso")
+    except Exception as e:
+        print(f"⚠️ Erro ao conectar ao MongoDB: {str(e)}")
+        print("⚠️ Usando banco de dados simulado para demonstração")
+        USE_MOCK_DB = True
+else:
+    print("🔧 Modo de demonstração ativado manualmente")
+    client = None
+    db = None
+    
+    # Dados simulados para demonstração
+    mock_catalogs = [
+        {
+            "catalog_id": "demo-catalog-1",
+            "filename": "catalogo_exemplo.pdf",
+            "upload_date": datetime.now().isoformat(),
+            "status": "ready",
+            "page_count": 3,
+            "file_path": f"{DATA_DIR}/uploads/demo-catalog-1.pdf"
+        },
+        {
+            "catalog_id": "demo-catalog-2",
+            "filename": "produtos_verao.jpg",
+            "upload_date": datetime.now().isoformat(),
+            "status": "ready",
+            "page_count": 1,
+            "file_path": f"{DATA_DIR}/uploads/demo-catalog-2.jpg"
+        }
+    ]
+    mock_annotations = []
+    
+    # Criar imagens de exemplo para demonstração
+    os.makedirs(f"{DATA_DIR}/images/demo-catalog-1", exist_ok=True)
+    os.makedirs(f"{DATA_DIR}/images/demo-catalog-2", exist_ok=True)
+    
+    # Criar imagens de exemplo com texto
+    for i in range(1, 4):
+        img = Image.new('RGB', (800, 600), color = (255, 255, 255))
+        from PIL import ImageDraw, ImageFont
+        d = ImageDraw.Draw(img)
+        d.text((300, 300), f"Página de exemplo {i}", fill=(0, 0, 0))
+        img.save(f"{DATA_DIR}/images/demo-catalog-1/page_{i}.jpg")
+    
+    # Criar imagem de exemplo para o segundo catálogo
+    img = Image.new('RGB', (800, 600), color = (200, 240, 255))
+    d = ImageDraw.Draw(img)
+    d.text((300, 300), "Produtos de Verão", fill=(0, 0, 0))
+    img.save(f"{DATA_DIR}/images/demo-catalog-2/page_1.jpg")
 
 # Rotas de catalogo
 @app.post("/catalogs/", response_model=Dict[str, Any])
@@ -102,7 +164,10 @@ async def create_catalog(background_tasks: BackgroundTasks, file: UploadFile = F
             "file_type": file_extension[1:]  # Remover o ponto da extensão
         }
         
-        await db.catalogs.insert_one(catalog_info)
+        if USE_MOCK_DB:
+            mock_catalogs.append(catalog_info)
+        else:
+            await db.catalogs.insert_one(catalog_info)
         
         # Agendar processamento em background
         background_tasks.add_task(process_catalog, catalog_id, upload_path)
@@ -122,7 +187,11 @@ async def process_catalog(catalog_id: str, file_path: str):
     """
     try:
         # Obter informações do catálogo
-        catalog_info = await db.catalogs.find_one({"catalog_id": catalog_id})
+        if USE_MOCK_DB:
+            catalog_info = next((cat for cat in mock_catalogs if cat["catalog_id"] == catalog_id), None)
+        else:
+            catalog_info = await db.catalogs.find_one({"catalog_id": catalog_id})
+            
         if not catalog_info:
             raise Exception(f"Catálogo {catalog_id} não encontrado no banco de dados")
         
@@ -166,40 +235,61 @@ async def process_catalog(catalog_id: str, file_path: str):
             raise Exception(f"Tipo de arquivo não suportado: {file_type}")
         
         # Atualizar status no banco de dados
-        await db.catalogs.update_one(
-            {"catalog_id": catalog_id},
-            {"$set": {"status": "ready", "page_count": page_count}}
-        )
+        if USE_MOCK_DB:
+            for cat in mock_catalogs:
+                if cat["catalog_id"] == catalog_id:
+                    cat["status"] = "ready"
+                    cat["page_count"] = page_count
+        else:
+            await db.catalogs.update_one(
+                {"catalog_id": catalog_id},
+                {"$set": {"status": "ready", "page_count": page_count}}
+            )
         
         logger.info(f"Catálogo {catalog_id} processado com sucesso. {page_count} páginas extraídas.")
         
     except Exception as e:
         logger.error(f"Erro ao processar catálogo {catalog_id}: {str(e)}")
-        await db.catalogs.update_one(
-            {"catalog_id": catalog_id},
-            {"$set": {"status": "error", "error_message": str(e)}}
-        )
+        if USE_MOCK_DB:
+            for cat in mock_catalogs:
+                if cat["catalog_id"] == catalog_id:
+                    cat["status"] = "error"
+                    cat["error_message"] = str(e)
+        else:
+            await db.catalogs.update_one(
+                {"catalog_id": catalog_id},
+                {"$set": {"status": "error", "error_message": str(e)}}
+            )
 
 @app.get("/catalogs/", response_model=List[Dict[str, Any]])
 async def list_catalogs():
     """
     Lista todos os catálogos disponíveis.
     """
-    catalogs = await db.catalogs.find().to_list(length=100)
-    # Converter ObjectIds para strings
-    return serialize_mongo(catalogs)
+    if USE_MOCK_DB:
+        return mock_catalogs
+    else:
+        catalogs = await db.catalogs.find().to_list(length=100)
+        # Converter ObjectIds para strings
+        return serialize_mongo(catalogs)
 
 @app.get("/catalogs/{catalog_id}", response_model=Dict[str, Any])
 async def get_catalog(catalog_id: str):
     """
     Obtém informações detalhadas sobre um catálogo específico.
     """
-    catalog = await db.catalogs.find_one({"catalog_id": catalog_id})
+    if USE_MOCK_DB:
+        catalog = next((cat for cat in mock_catalogs if cat["catalog_id"] == catalog_id), None)
+    else:
+        catalog = await db.catalogs.find_one({"catalog_id": catalog_id})
+        
     if not catalog:
         raise HTTPException(status_code=404, detail="Catálogo não encontrado")
     
-    # Converter ObjectIds para strings
-    return serialize_mongo(catalog)
+    # Converter ObjectIds para strings se necessário
+    if not USE_MOCK_DB:
+        return serialize_mongo(catalog)
+    return catalog
 
 @app.delete("/catalogs/{catalog_id}", response_model=Dict[str, Any])
 async def delete_catalog(catalog_id: str):
@@ -239,7 +329,11 @@ async def list_catalog_pages(catalog_id: str):
     """
     Lista todas as páginas de um catálogo específico.
     """
-    catalog = await db.catalogs.find_one({"catalog_id": catalog_id})
+    if USE_MOCK_DB:
+        catalog = next((cat for cat in mock_catalogs if cat["catalog_id"] == catalog_id), None)
+    else:
+        catalog = await db.catalogs.find_one({"catalog_id": catalog_id})
+        
     if not catalog:
         raise HTTPException(status_code=404, detail="Catálogo não encontrado")
     
@@ -248,11 +342,13 @@ async def list_catalog_pages(catalog_id: str):
     for i in range(1, catalog.get("page_count", 0) + 1):
         pages.append({
             "page_number": i,
-            "image_path": f"/api/catalogs/{catalog_id}/pages/{i}/image"
+            "image_path": f"/catalogs/{catalog_id}/pages/{i}/image"
         })
     
     # Converter ObjectIds para strings se necessário
-    return serialize_mongo(pages)
+    if not USE_MOCK_DB:
+        return serialize_mongo(pages)
+    return pages
 
 @app.get("/catalogs/{catalog_id}/pages/{page_number}/image")
 async def get_catalog_page_image(catalog_id: str, page_number: int):
