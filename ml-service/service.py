@@ -175,17 +175,17 @@ def start_detection(catalog_id):
     catalog_jobs[job_id]["results"] = [
         {
             "page_number": 1,
-            "image_path": f"/catalogs/{catalog_id}/page_001.jpg",
+            "image_path": f"/api/catalogs/{catalog_id}/pages/1/image",
             "annotations": [
-                {"type": "produto", "confidence": 0.95, "bbox": [10, 10, 100, 100], "id": "prod_001"},
-                {"type": "produto", "confidence": 0.88, "bbox": [150, 150, 250, 250], "id": "prod_002"}
+                {"type": "produto", "confidence": 0.95, "bbox": {"x1": 10, "y1": 10, "x2": 100, "y2": 100}, "id": "prod_001"},
+                {"type": "produto", "confidence": 0.88, "bbox": {"x1": 150, "y1": 150, "x2": 250, "y2": 250}, "id": "prod_002"}
             ]
         },
         {
             "page_number": 2,
-            "image_path": f"/catalogs/{catalog_id}/page_002.jpg",
+            "image_path": f"/api/catalogs/{catalog_id}/pages/2/image",
             "annotations": [
-                {"type": "produto", "confidence": 0.92, "bbox": [20, 20, 120, 120], "id": "prod_003"}
+                {"type": "produto", "confidence": 0.92, "bbox": {"x1": 20, "y1": 20, "x2": 120, "y2": 120}, "id": "prod_003"}
             ]
         }
     ]
