@@ -11,8 +11,15 @@ export const getApiUrl = () => {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
     
-    // Usar caminho relativo para que o proxy funcione
-    return '/api';
+    // Extrair o domínio base e substituir o subdomínio
+    // De: catalog-list-app-tunnel-xxx.devinapps.com
+    // Para: backend-app-tunnel-xxx.devinapps.com
+    const domainParts = hostname.split('.');
+    const subdomain = domainParts[0].replace('catalog-list-app', 'backend-app');
+    const newHostname = [subdomain, ...domainParts.slice(1)].join('.');
+    
+    console.log(`Usando URL dinâmica para API em domínio externo: ${protocol}//${newHostname}`);
+    return `${protocol}//${newHostname}`;
   }
   
   // Verificar se estamos em ambiente de desenvolvimento com Docker
