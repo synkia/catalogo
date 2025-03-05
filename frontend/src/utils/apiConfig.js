@@ -9,7 +9,13 @@ export const getApiUrl = () => {
   // para que o proxy do React possa redirecionar corretamente
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     // Usar caminho relativo para que o proxy funcione
-    return '';
+    return '/api';
+  }
+  
+  // Verificar se estamos em ambiente de desenvolvimento com Docker
+  if (process.env.NODE_ENV === 'development') {
+    // No ambiente Docker, usar o nome do serviço como hostname
+    return '/api';
   }
   
   // Fallback para localhost
@@ -20,4 +26,4 @@ export const getApiUrl = () => {
 export const API_URL = getApiUrl();
 
 // Log para debug
-console.log('API URL configurada:', API_URL);
+console.log('API URL configurada:', API_URL, 'Ambiente:', process.env.NODE_ENV);
