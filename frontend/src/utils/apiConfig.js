@@ -5,9 +5,12 @@ export const getApiUrl = () => {
     return process.env.REACT_APP_API_URL;
   }
   
-  // Se estiver acessando de um domínio externo, use caminhos relativos
-  // para que o proxy do React possa redirecionar corretamente
+  // Se estiver acessando de um domínio externo, use a URL do navegador
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    // Usar a URL do navegador para acessar o backend
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    
     // Usar caminho relativo para que o proxy funcione
     return '/api';
   }

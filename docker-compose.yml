@@ -17,6 +17,9 @@ services:
       - REACT_APP_API_URL=http://localhost:8001
       - PORT=3000
       - PUBLIC_URL=
+      - HOST=0.0.0.0
+      - WDS_SOCKET_PORT=0
+      - DANGEROUSLY_DISABLE_HOST_CHECK=true
     networks:
       - catalogo-net
 
@@ -94,4 +97,4 @@ volumes:
 
 networks:
   catalogo-net:
-    driver: bridge 
+    driver: bridge  
