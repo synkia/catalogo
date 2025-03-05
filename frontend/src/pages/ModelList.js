@@ -69,6 +69,16 @@ const ModelList = () => {
   const [modelToDelete, setModelToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   
+  // Limpar o intervalo quando o componente for desmontado
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        console.log('Limpando intervalo de polling ao desmontar componente');
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
+
   // Buscar modelos e catálogos
   const fetchData = useCallback(async () => {
     try {
@@ -132,13 +142,6 @@ const ModelList = () => {
 
   useEffect(() => {
     fetchData();
-    
-    // Limpar intervalo de polling ao desmontar o componente
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
-    };
   }, [fetchData]);
 
   // Formatar data

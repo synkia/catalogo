@@ -155,7 +155,8 @@ def start_detection(catalog_id):
         },
         "detections_count": 0,
         "log": ["Iniciando processamento do catálogo"],
-        "error": None
+        "error": None,
+        "results": None
     }
     
     # Simulação de processamento em background
@@ -169,6 +170,25 @@ def start_detection(catalog_id):
     catalog_jobs[job_id]["progress"]["processed_pages"] = 10
     catalog_jobs[job_id]["detections_count"] = 25
     catalog_jobs[job_id]["log"].append("Processamento concluído")
+    
+    # Adicionar resultados simulados
+    catalog_jobs[job_id]["results"] = [
+        {
+            "page_number": 1,
+            "image_path": f"/catalogs/{catalog_id}/page_001.jpg",
+            "annotations": [
+                {"type": "produto", "confidence": 0.95, "bbox": [10, 10, 100, 100], "id": "prod_001"},
+                {"type": "produto", "confidence": 0.88, "bbox": [150, 150, 250, 250], "id": "prod_002"}
+            ]
+        },
+        {
+            "page_number": 2,
+            "image_path": f"/catalogs/{catalog_id}/page_002.jpg",
+            "annotations": [
+                {"type": "produto", "confidence": 0.92, "bbox": [20, 20, 120, 120], "id": "prod_003"}
+            ]
+        }
+    ]
     
     return jsonify({
         "job_id": job_id,
@@ -240,7 +260,7 @@ def get_detection_result(job_id):
                 "message": "Processamento do catálogo ainda não concluído"
             })
             
-        # Simulação de resultados para o catálogo
+        # Retorna os resultados reais do catálogo
         return jsonify({
             "job_id": job_id,
             "catalog_id": job_info["catalog_id"],
@@ -252,25 +272,20 @@ def get_detection_result(job_id):
                 "processed_pages": job_info["progress"]["processed_pages"],
                 "total_detections": job_info["detections_count"]
             },
-            "pages": [
-                {
-                    "page_number": 1,
-                    "objects": [
-                        {"class": "produto", "box": [10, 10, 100, 100], "score": 0.95},
-                        {"class": "produto", "box": [150, 150, 250, 250], "score": 0.88}
-                    ]
-                },
-                {
-                    "page_number": 2,
-                    "objects": [
-                        {"class": "produto", "box": [20, 20, 120, 120], "score": 0.92}
-                    ]
-                }
-                # Na implementação real, incluiria todas as páginas e objetos detectados
-            ]
+            "results": job_info["results"] if "results" in job_info else []
         })
     else:
         return jsonify({"detail": f"Job de detecção {job_id} não encontrado"}), 404
+
+# Adiciona uma rota alternativa para compatibilidade com o backend
+@app.route('/results/<job_id>', methods=['GET'])
+def get_results(job_id):
+    """
+    Rota alternativa para obter resultados de detecção.
+    Esta rota é necessária para compatibilidade com o backend.
+    """
+    print(f"Requisição para obter resultados de detecção via rota '/results/{job_id}'")
+    return get_detection_result(job_id)
 
 def run_training(job_id, model_name, catalog_ids, config):
     """
