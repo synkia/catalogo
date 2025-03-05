@@ -18,8 +18,8 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # Verificar se o Docker Compose está instalado
-if ! command -v docker-compose &> /dev/null; then
-    echo -e "${RED}Docker Compose não encontrado. Por favor, instale o Docker Compose antes de continuar.${NC}"
+if ! command -v docker &> /dev/null; then
+    echo -e "${RED}Docker não encontrado. Por favor, instale o Docker antes de continuar.${NC}"
     exit 1
 fi
 
@@ -42,7 +42,7 @@ read -p "Opção: " opcao
 case $opcao in
     1)
         echo -e "${YELLOW}Iniciando todos os serviços...${NC}"
-        docker-compose up -d
+        docker compose up -d
         echo -e "${GREEN}Serviços iniciados.${NC}"
         echo -e "${BLUE}Frontend:${NC} http://localhost:3000"
         echo -e "${BLUE}Backend:${NC} http://localhost:8001"
@@ -50,28 +50,28 @@ case $opcao in
         ;;
     2)
         echo -e "${YELLOW}Iniciando frontend...${NC}"
-        docker-compose up -d frontend
+        docker compose up -d frontend
         echo -e "${GREEN}Frontend iniciado em:${NC} http://localhost:3000"
         ;;
     3)
         echo -e "${YELLOW}Iniciando backend...${NC}"
-        docker-compose up -d backend
+        docker compose up -d backend
         echo -e "${GREEN}Backend iniciado em:${NC} http://localhost:8001"
         ;;
     4)
         echo -e "${YELLOW}Iniciando serviço ML...${NC}"
-        docker-compose up -d ml-service
+        docker compose up -d ml-service
         echo -e "${GREEN}Serviço ML iniciado.${NC}"
         ;;
     5)
         echo -e "${YELLOW}Iniciando banco de dados e minio...${NC}"
-        docker-compose up -d mongodb minio
+        docker compose up -d mongodb minio
         echo -e "${GREEN}MongoDB e Minio iniciados.${NC}"
         echo -e "${BLUE}Minio:${NC} http://localhost:9001 (usuário: minioadmin, senha: minioadmin)"
         ;;
     6)
         echo -e "${YELLOW}Parando todos os serviços...${NC}"
-        docker-compose down
+        docker compose down
         echo -e "${GREEN}Serviços parados.${NC}"
         ;;
     7)
@@ -84,6 +84,6 @@ case $opcao in
 esac
 
 echo -e "\n${BLUE}=================================${NC}"
-echo -e "${GREEN}Para visualizar logs:${NC} docker-compose logs -f [serviço]"
-echo -e "${GREEN}Para parar:${NC} docker-compose down"
-echo -e "${BLUE}=================================${NC}" 
+echo -e "${GREEN}Para visualizar logs:${NC} docker compose logs -f [serviço]"
+echo -e "${GREEN}Para parar:${NC} docker compose down"
+echo -e "${BLUE}=================================${NC}"        
