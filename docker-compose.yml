@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # Frontend - Aplicação React
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:8001
+      - PORT=3000
+      - PUBLIC_URL=
+    networks:
+      - catalogo-net
+
+  # Backend - API Python com FastAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    depends_on:
+      - mongodb
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/catalogo
+      - DATA_DIR=/data
+    networks:
+      - catalogo-net
+
+  # Serviço de ML - Para processamento pesado/treinamento
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    ports:
+      - "5050:5000"
+    volumes:
+      - ./ml-service:/app
+      - ./data:/data
+      - ./models:/models
+    # Acesso à GPU (descomente se disponível)
+    #deploy:
+    #  resources:
+    #    reservations:
+    #      devices:
+    #        - driver: nvidia
+    #          count: 1
+    #          capabilities: [gpu]
+    environment:
+      - MODELS_DIR=/models
+      - DATA_DIR=/data
+    networks:
+      - catalogo-net
+
+  # Banco de Dados MongoDB
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - catalogo-net
+
+  # Serviço Minio para armazenamento de objetos (alternativa ao S3)
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server --console-address ":9001" /data
+    networks:
+      - catalogo-net
+
+volumes:
+  mongodb-data:
+  minio-data:
+
+networks:
+  catalogo-net:
+    driver: bridge 

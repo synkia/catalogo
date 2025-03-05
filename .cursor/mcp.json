@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "github.com/modelcontextprotocol/servers/tree/main/src/memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {
+        "MEMORY_FILE_PATH": "/home/thiago/Cline/MCP/memory-server/memory.json"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "read_graph",
+        "create_entities",
+        "create_relations",
+        "add_observations",
+        "delete_entities",
+        "delete_observations",
+        "open_nodes",
+        "search_nodes"
+      ]
+    }
+  }
+}

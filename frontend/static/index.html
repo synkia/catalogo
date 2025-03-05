@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo ML - Sistema de Extração e Análise de Produtos</title>
+    <style>
+        :root {
+            --primary-color: #4a6da7;
+            --secondary-color: #6c757d;
+            --accent-color: #ffc107;
+            --dark-color: #343a40;
+            --light-color: #f8f9fa;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-main);
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f7fc;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        /* Header Styles */
+        header {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo img {
+            height: 40px;
+            margin-right: 10px;
+        }
+        
+        .logo h1 {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+        
+        nav ul li {
+            margin-left: 1.5rem;
+        }
+        
+        nav ul li a {
+            text-decoration: none;
+            color: var(--dark-color);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        nav ul li a:hover {
+            color: var(--primary-color);
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #2a4a7f 100%);
+            color: white;
+            padding: 4rem 0;
+            text-align: center;
+        }
+        
+        .hero h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            opacity: 0.9;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.8rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: var(--dark-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #e0a800;
+            transform: translateY(-2px);
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 4rem 0;
+            background-color: white;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .section-title h3 {
+            font-size: 2rem;
+            color: var(--dark-color);
+            margin-bottom: 1rem;
+        }
+        
+        .section-title p {
+            color: var(--secondary-color);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .feature-card {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+        }
+        
+        .feature-card h4 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--dark-color);
+        }
+        
+        .feature-card p {
+            color: var(--secondary-color);
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--dark-color);
+            color: white;
+            padding: 3rem 0;
+        }
+        
+        .footer-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+        
+        .footer-col h4 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            padding-bottom: 0.5rem;
+        }
+        
+        .footer-col h4::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 2px;
+            background-color: var(--accent-color);
+        }
+        
+        .footer-col p {
+            margin-bottom: 1rem;
+            opacity: 0.8;
+        }
+        
+        .footer-links {
+            list-style: none;
+        }
+        
+        .footer-links li {
+            margin-bottom: 0.8rem;
+        }
+        
+        .footer-links a {
+            color: #ddd;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer-links a:hover {
+            color: var(--accent-color);
+        }
+        
+        .copyright {
+            text-align: center;
+            padding-top: 2rem;
+            margin-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0.7;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            nav ul {
+                margin-top: 1rem;
+            }
+            
+            nav ul li {
+                margin: 0 0.7rem;
+            }
+            
+            .hero h2 {
+                font-size: 2rem;
+            }
+            
+            .hero p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container header-container">
+            <div class="logo">
+                <h1>🛒 Catálogo ML</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#">Início</a></li>
+                    <li><a href="#">Recursos</a></li>
+                    <li><a href="#">Como Funciona</a></li>
+                    <li><a href="#">Contato</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h2>Sistema de Extração e Análise de Produtos em Catálogos</h2>
+            <p>Automatize o processo de análise de catálogos de fornecedores. Extraia produtos de PDFs e prepare-os para análise no MercadoLivre ou outros marketplaces.</p>
+            <a href="#" class="btn btn-primary">Começar Agora</a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <div class="section-title">
+                <h3>Recursos Principais</h3>
+                <p>Conheça as funcionalidades que tornam o Catálogo ML a ferramenta ideal para vendedores de marketplaces.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📄</div>
+                    <h4>Processamento de PDFs</h4>
+                    <p>Extraia informações de catálogos em PDF, mesmo sem padrão definido.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h4>Detecção de Produtos</h4>
+                    <p>Utilize visão computacional para identificar produtos automaticamente.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✏️</div>
+                    <h4>Anotação Manual</h4>
+                    <p>Ferramenta de anotação para treinar o modelo com seus próprios dados.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h4>Análise de Mercado</h4>
+                    <p>Valide o potencial de venda dos produtos no MercadoLivre.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h4>Exportação de Dados</h4>
+                    <p>Exporte os dados em formato JSON para integração com APIs.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🧠</div>
+                    <h4>Aprendizado Contínuo</h4>
+                    <p>O sistema melhora com o uso, adaptando-se aos seus catálogos.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-container">
+                <div class="footer-col">
+                    <h4>Sobre o Projeto</h4>
+                    <p>Catálogo ML é uma ferramenta para vendedores de marketplaces que automatiza o processo de análise de catálogos de fornecedores.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Links Rápidos</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Início</a></li>
+                        <li><a href="#">Recursos</a></li>
+                        <li><a href="#">Como Funciona</a></li>
+                        <li><a href="#">Documentação</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Contato</h4>
+                    <ul class="footer-links">
+                        <li><a href="mailto:thiago@exemplo.com">thiago@exemplo.com</a></li>
+                        <li><a href="https://github.com/thiago">GitHub</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2023 Catálogo ML. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html> 

@@ -1,0 +1,33 @@
+REGRAS DO PROJETO CATÁLOGO ML
+
+1. ESTRUTURA DO PROJETO
+   - O frontend utiliza um servidor Nginx para servir páginas estáticas
+   - O backend é construído com FastAPI
+   - O serviço ML utiliza Detectron2 para processamento de imagens
+   - Todos os serviços são containerizados com Docker
+
+2. PADRÕES DE DESENVOLVIMENTO
+   - Código em português para melhor compreensão
+   - Comentários explicativos para iniciantes
+   - Nomes de variáveis e funções descritivos
+   - Estrutura modular e reutilizável
+
+3. FLUXO DE TRABALHO
+   - Desenvolvimento local usando Docker Compose
+   - Teste de componentes individuais antes da integração
+   - Documentação clara e atualizada
+
+4. INTERFACE DO USUÁRIO
+   - Design responsivo para todos os dispositivos
+   - Interface intuitiva para usuários iniciantes
+   - Feedback visual para todas as ações
+
+5. SEGURANÇA
+   - Validação de entradas do usuário
+   - Proteção contra ataques comuns
+   - Armazenamento seguro de dados
+
+6. DESEMPENHO
+   - Otimização para carregamento rápido
+   - Processamento eficiente de imagens
+   - Uso responsável de recursos do servidor 
