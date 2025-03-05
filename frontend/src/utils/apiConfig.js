@@ -5,15 +5,11 @@ export const getApiUrl = () => {
     return process.env.REACT_APP_API_URL;
   }
   
-  // Se estiver acessando de um domínio externo, use o mesmo domínio para a API
-  // mas com a porta 8001 (porta do backend)
+  // Se estiver acessando de um domínio externo, use caminhos relativos
+  // para que o proxy do React possa redirecionar corretamente
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    // Extrair o protocolo e o hostname
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    
-    // Construir a URL da API usando o mesmo domínio, mas com a porta do backend
-    return `${protocol}//${hostname}:8001`;
+    // Usar caminho relativo para que o proxy funcione
+    return '';
   }
   
   // Fallback para localhost
@@ -22,3 +18,6 @@ export const getApiUrl = () => {
 
 // Exportar a URL da API para uso em componentes
 export const API_URL = getApiUrl();
+
+// Log para debug
+console.log('API URL configurada:', API_URL);

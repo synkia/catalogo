@@ -49,6 +49,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Configurações
@@ -578,10 +579,28 @@ async def delete_model(model_id: str):
     except httpx.RequestError as e:
         raise HTTPException(status_code=500, detail=f"Erro ao comunicar com serviço ML: {str(e)}")
 
+@app.get("/manifest.json", include_in_schema=False)
+async def get_manifest():
+    return JSONResponse({
+        "short_name": "Catalogo ML",
+        "name": "Catalogo ML - Sistema de Extração e Análise de Produtos em Catálogos",
+        "icons": [
+            {
+                "src": "favicon.ico",
+                "sizes": "64x64 32x32 24x24 16x16",
+                "type": "image/x-icon"
+            }
+        ],
+        "start_url": ".",
+        "display": "standalone",
+        "theme_color": "#2D4B73",
+        "background_color": "#ffffff"
+    })
+
 @app.get("/")
 async def root():
     return serialize_mongo({"message": "Catalogo ML API - Sistema de Extração e Análise de Produtos em Catálogos"})
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)  
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)      
