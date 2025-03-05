@@ -5,31 +5,8 @@ export const getApiUrl = () => {
     return process.env.REACT_APP_API_URL;
   }
   
-  // Se estiver acessando de um domínio externo, use a URL do navegador
-  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    // Usar a URL do navegador para acessar o backend
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    
-    // Extrair o domínio base e substituir o subdomínio
-    // De: catalog-list-app-tunnel-xxx.devinapps.com
-    // Para: backend-app-tunnel-xxx.devinapps.com
-    const domainParts = hostname.split('.');
-    const subdomain = domainParts[0].replace('catalog-list-app', 'backend-app');
-    const newHostname = [subdomain, ...domainParts.slice(1)].join('.');
-    
-    console.log(`Usando URL dinâmica para API em domínio externo: ${protocol}//${newHostname}`);
-    return `${protocol}//${newHostname}`;
-  }
-  
-  // Verificar se estamos em ambiente de desenvolvimento com Docker
-  if (process.env.NODE_ENV === 'development') {
-    // No ambiente Docker, usar o nome do serviço como hostname
-    return '/api';
-  }
-  
-  // Fallback para localhost
-  return 'http://localhost:8001';
+  // Usar caminho relativo para que o proxy do Nginx funcione
+  return '/api';
 };
 
 // Exportar a URL da API para uso em componentes
