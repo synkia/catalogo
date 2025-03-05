@@ -19,36 +19,75 @@ app = Flask(__name__)
 # Armazenamento em memória para jobs de detecção e treinamento
 detection_jobs = {}
 training_jobs = {}
-models_db = [
-    {
-        "model_id": "6fa459ea-ee8a-3ca4-894e-db77e160355e",
-        "name": "Modelo Produto Padrão",
-        "created_at": "2023-10-15T14:30:00.000Z",
-        "status": "ready",
-        "base_model": "faster_rcnn_R_50_FPN_3x",
-        "iterations": 1000,
-        "classes": ["produto"],
-        "metrics": {
-            "accuracy": 0.92,
-            "precision": 0.89,
-            "recall": 0.94
+
+# Função para salvar modelos em disco
+def save_models_to_disk():
+    """
+    Salva a lista de modelos em um arquivo JSON no diretório de modelos.
+    """
+    models_dir = os.environ.get("MODELS_DIR", "/models")
+    models_file = os.path.join(models_dir, "models_metadata.json")
+    
+    try:
+        with open(models_file, "w") as f:
+            json.dump(models_db, f, indent=2)
+        print(f"Modelos salvos com sucesso em: {models_file}")
+    except Exception as e:
+        print(f"Erro ao salvar modelos: {str(e)}")
+
+# Função para carregar modelos do disco
+def load_models_from_disk():
+    """
+    Carrega a lista de modelos de um arquivo JSON no diretório de modelos.
+    """
+    models_dir = os.environ.get("MODELS_DIR", "/models")
+    models_file = os.path.join(models_dir, "models_metadata.json")
+    
+    if os.path.exists(models_file):
+        try:
+            with open(models_file, "r") as f:
+                loaded_models = json.load(f)
+            print(f"Carregados {len(loaded_models)} modelos de: {models_file}")
+            return loaded_models
+        except Exception as e:
+            print(f"Erro ao carregar modelos: {str(e)}")
+    else:
+        print(f"Arquivo de modelos não encontrado: {models_file}")
+    
+    # Retornar modelos padrão se não for possível carregar
+    return [
+        {
+            "model_id": "6fa459ea-ee8a-3ca4-894e-db77e160355e",
+            "name": "Modelo Produto Padrão",
+            "created_at": "2023-10-15T14:30:00.000Z",
+            "status": "ready",
+            "base_model": "faster_rcnn_R_50_FPN_3x",
+            "iterations": 1000,
+            "classes": ["produto"],
+            "metrics": {
+                "accuracy": 0.92,
+                "precision": 0.89,
+                "recall": 0.94
+            }
+        },
+        {
+            "model_id": "7fa459ea-ee8a-3ca4-894e-db77e160355e",
+            "name": "Modelo Multiclasse",
+            "created_at": "2023-11-20T10:15:00.000Z",
+            "status": "ready",
+            "base_model": "mask_rcnn_R_101_FPN_3x",
+            "iterations": 2500,
+            "classes": ["produto", "etiqueta", "preço"],
+            "metrics": {
+                "accuracy": 0.88,
+                "precision": 0.85,
+                "recall": 0.90
+            }
         }
-    },
-    {
-        "model_id": "7fa459ea-ee8a-3ca4-894e-db77e160355e",
-        "name": "Modelo Multiclasse",
-        "created_at": "2023-11-20T10:15:00.000Z",
-        "status": "ready",
-        "base_model": "mask_rcnn_R_101_FPN_3x",
-        "iterations": 2500,
-        "classes": ["produto", "etiqueta", "preço"],
-        "metrics": {
-            "accuracy": 0.88,
-            "precision": 0.85,
-            "recall": 0.90
-        }
-    }
-]  # Lista para armazenar informações de modelos
+    ]
+
+# Inicializa a lista de modelos carregando do disco
+models_db = load_models_from_disk()
 catalog_jobs = {}  # Jobs para processamento de catálogos completos
 
 # Configurações globais
@@ -312,6 +351,8 @@ def run_training(job_id, model_name, catalog_ids, config):
         for model in models_db:
             if model.get("model_id") == model_id:
                 model["status"] = "training"
+                # Salvar modelos em disco após atualização
+                save_models_to_disk()
                 break
         
         # Determinar se vamos usar simulação ou dados reais
@@ -398,6 +439,8 @@ def run_training(job_id, model_name, catalog_ids, config):
                 if model.get("model_id") == model_id:
                     model["train_size"] = train_size
                     model["val_size"] = val_size
+                    # Salvar modelos em disco após atualização
+                    save_models_to_disk()
                     break
             
             # Simulação de treinamento
@@ -430,6 +473,8 @@ def run_training(job_id, model_name, catalog_ids, config):
                 if model.get("model_id") == model_id:
                     model["train_size"] = train_size
                     model["val_size"] = val_size
+                    # Salvar modelos em disco após atualização
+                    save_models_to_disk()
                     break
             
             print(f"Usando {train_size} imagens para treino e {val_size} para validação")
@@ -474,6 +519,8 @@ def run_training(job_id, model_name, catalog_ids, config):
                     "precision": 0.80 + random.random() * 0.15,
                     "recall": 0.82 + random.random() * 0.12
                 }
+                # Salvar modelos em disco após atualização
+                save_models_to_disk()
                 break
     
     except Exception as e:
@@ -492,6 +539,8 @@ def run_training(job_id, model_name, catalog_ids, config):
             if model.get("model_id") == model_id:
                 model["status"] = "failed"
                 model["error"] = error_msg
+                # Salvar modelos em disco após atualização
+                save_models_to_disk()
                 break
 
 @app.route('/train', methods=['POST'])
@@ -547,6 +596,9 @@ def start_training():
         "train_size": 0,  # Será atualizado durante o treinamento
         "val_size": 0     # Será atualizado durante o treinamento
     })
+    
+    # Salvar modelos em disco
+    save_models_to_disk()
     
     # Iniciar treinamento em um thread separado
     training_thread = threading.Thread(target=run_training, args=(job_id, model_name, catalog_ids, config))
@@ -624,6 +676,9 @@ def delete_model(model_id):
     
     if not model_exists:
         return jsonify({"detail": f"Modelo {model_id} não encontrado"}), 404
+    
+    # Salvar modelos em disco após remover
+    save_models_to_disk()
     
     # Remover arquivos do modelo (apenas simulação)
     print(f"Modelo {model_id} removido com sucesso")
