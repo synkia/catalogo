@@ -177,15 +177,15 @@ def start_detection(catalog_id):
             "page_number": 1,
             "image_path": f"/api/catalogs/{catalog_id}/pages/1/image",
             "annotations": [
-                {"type": "produto", "confidence": 0.95, "bbox": {"x1": 10, "y1": 10, "x2": 100, "y2": 100}, "id": "prod_001"},
-                {"type": "produto", "confidence": 0.88, "bbox": {"x1": 150, "y1": 150, "x2": 250, "y2": 250}, "id": "prod_002"}
+                {"type": "produto", "confidence": 0.95, "bbox": {"x1": 100, "y1": 100, "x2": 400, "y2": 500}, "id": "prod_001"},
+                {"type": "produto", "confidence": 0.88, "bbox": {"x1": 450, "y1": 150, "x2": 750, "y2": 550}, "id": "prod_002"}
             ]
         },
         {
             "page_number": 2,
             "image_path": f"/api/catalogs/{catalog_id}/pages/2/image",
             "annotations": [
-                {"type": "produto", "confidence": 0.92, "bbox": {"x1": 20, "y1": 20, "x2": 120, "y2": 120}, "id": "prod_003"}
+                {"type": "produto", "confidence": 0.92, "bbox": {"x1": 200, "y1": 200, "x2": 500, "y2": 600}, "id": "prod_003"}
             ]
         }
     ]
