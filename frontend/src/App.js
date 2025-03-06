@@ -10,11 +10,10 @@ import Dashboard from './pages/Dashboard';
 import CatalogList from './pages/CatalogList';
 import CatalogDetail from './pages/CatalogDetail';
 import AnnotationTool from './pages/AnnotationTool';
-import TrainingDashboard from './pages/TrainingDashboard';
 import DetectionResults from './pages/DetectionResults';
-import ModelList from './pages/ModelList';
 import ErrorBoundary from './components/ErrorBoundary';
 import ExtractedProducts from './pages/ExtractedProducts';
+import PdfToJpg from './pages/PdfToJpg';
 
 // Tema personalizado
 const theme = createTheme({
@@ -46,10 +45,9 @@ const App = () => {
               <Route path="annotation/:catalogId/:pageNumber" element={<AnnotationTool />} />
               <Route path="annotate/:catalogId" element={<AnnotationTool />} />
               <Route path="annotate/:catalogId/:pageNumber" element={<AnnotationTool />} />
-              <Route path="training" element={<TrainingDashboard />} />
-              <Route path="models" element={<ModelList />} />
               <Route path="results/:jobId" element={<DetectionResults />} />
               <Route path="products" element={<ExtractedProducts />} />
+              <Route path="pdf-to-jpg" element={<PdfToJpg />} />
             </Route>
           </Routes>
         </Router>

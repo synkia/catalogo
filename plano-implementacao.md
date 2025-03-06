@@ -4,7 +4,7 @@
 Desenvolver uma aplicação web que permita:
 1. Upload de catálogos em PDF
 2. Anotação visual de produtos e outros elementos
-3. Treinamento de modelo Detectron2
+3. Treinamento de modelo com PyTorch e OpenCV
 4. Extração automatizada de produtos para formato JSON
 
 ## 📅 Cronograma Estimado
@@ -23,7 +23,7 @@ Nível de dificuldade: ⭐⭐⭐☆☆ (Intermediário)
 - [ ] Instalar e configurar dependências frontend (React, React-Router, etc.)
 - [ ] Instalar e configurar dependências backend (Flask/FastAPI, etc.)
 - [ ] Configurar banco de dados (MongoDB ou PostgreSQL)
-- [ ] Setup inicial do Detectron2 em ambiente de desenvolvimento
+- [ ] Setup inicial do PyTorch e OpenCV em ambiente de desenvolvimento
 
 ### Protótipo Básico
 - [ ] Criar wireframes/mockups da interface
@@ -77,13 +77,12 @@ Nível de dificuldade: ⭐⭐⭐☆☆ (Intermediário)
 - [ ] Criar assistente para sugerir anotações semelhantes
 - [ ] Implementar modo de revisão de anotações
 
-## ✅ Fase 4: Integração com Detectron2 (2-3 semanas)
+## ✅ Fase 4: Integração com PyTorch e OpenCV (2-3 semanas)
 
-### Preparação de Dados para Treinamento
-- [ ] Converter anotações para formato compatível com Detectron2
-- [ ] Implementar divisão train/validation
-- [ ] Criar pipeline de aumento de dados (data augmentation)
-- [ ] Desenvolver sistema de validação de dados de treinamento
+### Preparação de Dados
+- [ ] Converter anotações para formato compatível com PyTorch
+- [ ] Implementar pipeline de pré-processamento de imagens
+- [ ] Criar datasets de treino e validação
 
 ### Configuração de Treinamento
 - [ ] Implementar interface para configuração de hiperparâmetros
@@ -172,7 +171,7 @@ Nível de dificuldade: ⭐⭐⭐☆☆ (Intermediário)
 2. **Software**
    - [ ] Ambiente Python 3.8+
    - [ ] PyTorch 1.9+
-   - [ ] Detectron2
+   - [ ] OpenCV
    - [ ] React 17+
    - [ ] Node.js 14+
    - [ ] MongoDB ou PostgreSQL

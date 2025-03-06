@@ -23,10 +23,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar Detectron2
-RUN pip install --no-cache-dir 'git+https://github.com/facebookresearch/detectron2.git'
-
-# Instalar outras dependências Python
+# Instalar dependências Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

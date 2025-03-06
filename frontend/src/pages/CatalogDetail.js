@@ -20,7 +20,6 @@ import {
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import EditIcon from '@mui/icons-material/Edit';
-import ModelTrainingIcon from '@mui/icons-material/Psychology';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import InfoIcon from '@mui/icons-material/Info';
 import axios from 'axios';
@@ -208,14 +207,6 @@ const CatalogDetail = () => {
             disabled={catalog.status !== 'ready'}
           >
             Anotar
-          </Button>
-          <Button 
-            variant="outlined" 
-            startIcon={<ModelTrainingIcon />}
-            onClick={() => navigate('/training', { state: { catalogs: [catalogId] } })}
-            disabled={catalog.status !== 'ready'}
-          >
-            Treinar Modelo
           </Button>
         </Box>
       </Grid>

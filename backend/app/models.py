@@ -43,25 +43,9 @@ class AnnotationSchema(BaseModel):
 
 class ProductDetectionSchema(BaseModel):
     catalog_id: str = Field(..., description="Identificador do catálogo")
-    model_id: Optional[str] = Field(None, description="Identificador do modelo a ser usado")
     min_confidence: Optional[float] = Field(0.5, description="Confiança mínima para detecções")
     detect_classes: Optional[List[AnnotationType]] = Field(
         [AnnotationType.PRODUTO], description="Classes a serem detectadas"
-    )
-
-
-class TrainingRequestSchema(BaseModel):
-    catalog_ids: List[str] = Field(..., description="Lista de catálogos para treinamento")
-    validation_split: Optional[float] = Field(
-        0.2, description="Proporção de dados para validação"
-    )
-    max_iter: Optional[int] = Field(5000, description="Número máximo de iterações")
-    batch_size: Optional[int] = Field(2, description="Tamanho do batch")
-    learning_rate: Optional[float] = Field(0.00025, description="Taxa de aprendizado")
-    model_name: Optional[str] = Field(None, description="Nome personalizado para o modelo")
-    base_model: Optional[str] = Field(
-        "COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml",
-        description="Modelo base para transfer learning"
     )
 
 
@@ -74,9 +58,19 @@ class DetectionResult(BaseModel):
 class DetectionResultsSchema(BaseModel):
     catalog_id: str = Field(..., description="Identificador do catálogo")
     job_id: str = Field(..., description="Identificador do job de detecção")
-    model_id: str = Field(..., description="Identificador do modelo usado")
     status: str = Field(..., description="Status da detecção")
     created_at: str = Field(..., description="Data de criação (ISO format)")
     completed_at: Optional[str] = Field(None, description="Data de conclusão (ISO format)")
     results: Optional[List[DetectionResult]] = Field(None, description="Resultados da detecção")
-    error_message: Optional[str] = Field(None, description="Mensagem de erro, se houver") 
+    error_message: Optional[str] = Field(None, description="Mensagem de erro, se houver")
+
+
+class TrainingRequestSchema(BaseModel):
+    name: str = Field(..., description="Nome do modelo")
+    catalog_ids: List[str] = Field(..., description="Lista de IDs de catálogos para treinamento")
+    config: Optional[Dict[str, Any]] = Field(None, description="Configurações de treinamento")
+
+
+class PdfToJpgSchema(BaseModel):
+    quality: Optional[int] = Field(90, description="Qualidade da imagem JPG (1-100)")
+    dpi: Optional[int] = Field(200, description="DPI para conversão (maior = melhor qualidade)") 

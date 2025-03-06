@@ -19,9 +19,8 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
-import TrainingIcon from '@mui/icons-material/FitnessCenter';
-import ModelIcon from '@mui/icons-material/Psychology';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 
 const drawerWidth = 240;
 
@@ -45,19 +44,14 @@ function AppLayout() {
       path: '/catalogs',
     },
     {
-      text: 'Treinamento',
-      icon: <TrainingIcon />,
-      path: '/training',
-    },
-    {
-      text: 'Modelos',
-      icon: <ModelIcon />,
-      path: '/models',
-    },
-    {
       text: 'Produtos Extraídos',
       icon: <ShoppingCartIcon />,
       path: '/products',
+    },
+    {
+      text: 'PDF para JPG',
+      icon: <PictureAsPdfIcon />,
+      path: '/pdf-to-jpg',
     },
   ];
 

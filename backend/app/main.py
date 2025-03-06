@@ -15,10 +15,13 @@ from .models import (
     CatalogSchema,
     AnnotationSchema,
     ProductDetectionSchema,
-    TrainingRequestSchema
+    TrainingRequestSchema,
+    PdfToJpgSchema
 )
 import shutil
 from PIL import Image
+import zipfile
+import io
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -56,6 +59,10 @@ app.add_middleware(
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 DATA_DIR = os.getenv("DATA_DIR", "./data")
 ML_SERVICE_URL = os.getenv("ML_SERVICE_URL", "http://ml-service:5000")
+
+# Configuração global para tamanho máximo de upload
+# 100MB = 100 * 1024 * 1024 = 104857600 bytes
+MAX_UPLOAD_SIZE = 104857600
 
 # Garantir que os diretórios necessários existam
 os.makedirs(f"{DATA_DIR}/uploads", exist_ok=True)
@@ -423,95 +430,27 @@ async def get_annotation(catalog_id: str, page_number: int):
     # Converter ObjectIds para strings
     return serialize_mongo(annotation)
 
-# Rotas de treinamento e detecção
-@app.post("/training/start", response_model=Dict[str, Any])
-async def start_training(request: TrainingRequestSchema):
-    """
-    Inicia um novo treinamento do modelo Detectron2.
-    (Mantida por compatibilidade, redireciona para /train)
-    """
-    return await start_training_direct(request)
-
-@app.post("/train", response_model=Dict[str, Any])
-async def start_training_direct(request: TrainingRequestSchema):
-    """
-    Inicia um novo treinamento do modelo Detectron2.
-    Rota direta para o serviço ML.
-    """
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{ML_SERVICE_URL}/train",
-                json=request.dict(),
-                timeout=30.0  # Apenas para iniciar o treinamento, não espera conclusão
-            )
-            
-            if response.status_code == 200:
-                return serialize_mongo(response.json())
-            else:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"Erro no serviço ML: {response.text}"
-                )
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao comunicar com serviço ML: {str(e)}")
-
-@app.get("/training/status/{job_id}", response_model=Dict[str, Any])
-async def get_training_status(job_id: str):
-    """
-    Verifica o status de um job de treinamento.
-    (Mantida por compatibilidade, redireciona para /train/status)
-    """
-    return await get_training_status_direct(job_id)
-
-@app.get("/train/status/{job_id}", response_model=Dict[str, Any]) 
-async def get_training_status_direct(job_id: str):
-    """
-    Verifica o status de um job de treinamento.
-    Rota direta para o serviço ML.
-    """
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{ML_SERVICE_URL}/train/status/{job_id}")
-            
-            if response.status_code == 200:
-                return serialize_mongo(response.json())
-            else:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"Erro no serviço ML: {response.text}"
-                )
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao comunicar com serviço ML: {str(e)}")
-
 @app.post("/detect/{catalog_id}", response_model=Dict[str, Any])
 async def detect_products(catalog_id: str, request: Request):
     """
-    Detecta produtos em um catálogo usando o modelo treinado.
+    Detecta produtos em um catálogo.
     """
-    # Extrair o model_id do corpo da requisição
-    request_data = await request.json()
-    model_id = request_data.get("model_id")
-    
-    print(f"Backend recebeu requisição para /detect/{catalog_id} com model_id: {model_id}")
-    print(f"Dados completos recebidos: {request_data}")
-    print(f"Tipo do model_id: {type(model_id)}")
-    
-    # Verificar se o model_id foi fornecido
-    if not model_id:
-        print("ERRO: ID do modelo não fornecido na requisição!")
-        raise HTTPException(status_code=400, detail="ID do modelo não fornecido")
-    
-    # Verificar se o catálogo existe
-    catalog = await db.catalogs.find_one({"catalog_id": catalog_id})
-    if not catalog:
-        print(f"ERRO: Catálogo com ID {catalog_id} não encontrado!")
-        raise HTTPException(status_code=404, detail="Catálogo não encontrado")
-    
     try:
+        # Extrair dados do corpo da requisição (se houver)
+        body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+        min_confidence = body.get("min_confidence", 0.5)
+        detect_classes = body.get("detect_classes", ["produto"])
+        
+        print(f"Detectando produtos no catálogo {catalog_id}")
+        print(f"min_confidence: {min_confidence}")
+        print(f"detect_classes: {detect_classes}")
+        
         async with httpx.AsyncClient() as client:
             # Modificando para usar a rota correta com o catalog_id na URL
-            json_data = {"model_id": model_id}
+            json_data = {
+                "min_confidence": min_confidence,
+                "detect_classes": detect_classes
+            }
             print(f"Enviando para ML Service: {json_data}")
             print(f"URL do ML Service: {ML_SERVICE_URL}/detect/{catalog_id}")
             
@@ -575,52 +514,6 @@ async def get_detection_results(job_id: str):
     except httpx.RequestError as e:
         raise HTTPException(status_code=500, detail=f"Erro ao comunicar com serviço ML: {str(e)}")
 
-@app.get("/models", response_model=List[Dict[str, Any]])
-async def list_models():
-    """
-    Lista todos os modelos treinados disponíveis.
-    """
-    print("Backend - Requisição para listar modelos")
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{ML_SERVICE_URL}/models")
-            
-            if response.status_code == 200:
-                models_list = response.json()
-                print(f"Backend - Modelos recebidos do ML Service: {len(models_list)}")
-                for idx, model in enumerate(models_list):
-                    print(f"  Modelo {idx+1}: ID={model.get('model_id')}, Nome={model.get('name')}")
-                
-                return serialize_mongo(models_list)
-            else:
-                print(f"Backend - Erro ao listar modelos: {response.status_code} - {response.text}")
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"Erro no serviço ML: {response.text}"
-                )
-    except httpx.RequestError as e:
-        print(f"Backend - Erro de conexão ao listar modelos: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Erro ao comunicar com serviço ML: {str(e)}")
-
-@app.delete("/models/{model_id}", response_model=Dict[str, Any])
-async def delete_model(model_id: str):
-    """
-    Exclui um modelo treinado.
-    """
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.delete(f"{ML_SERVICE_URL}/models/{model_id}")
-            
-            if response.status_code == 200:
-                return serialize_mongo(response.json())
-            else:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"Erro no serviço ML: {response.text}"
-                )
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao comunicar com serviço ML: {str(e)}")
-
 @app.get("/manifest.json", include_in_schema=False)
 async def get_manifest():
     return JSONResponse({
@@ -642,6 +535,144 @@ async def get_manifest():
 @app.get("/")
 async def root():
     return serialize_mongo({"message": "Catalogo ML API - Sistema de Extração e Análise de Produtos em Catálogos"})
+
+# Função para converter PDF para JPG
+async def convert_pdf_to_jpg(file_path: str, output_dir: str, dpi: int = 200, quality: int = 90):
+    """
+    Converte todas as páginas de um PDF para arquivos JPG
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    
+    try:
+        # Converter PDF para imagens
+        images = pdf2image.convert_from_path(
+            file_path,
+            dpi=dpi,
+            output_folder=None,
+            fmt="jpeg"
+        )
+        
+        image_paths = []
+        
+        # Salvar cada página como um arquivo JPG
+        for i, image in enumerate(images):
+            image_path = os.path.join(output_dir, f"pagina_{i+1}.jpg")
+            image.save(image_path, "JPEG", quality=quality)
+            image_paths.append(image_path)
+            
+        return image_paths
+    except Exception as e:
+        logger.error(f"Erro ao converter PDF para JPG: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro ao converter PDF: {str(e)}")
+
+@app.post("/pdf-to-jpg/", response_model=Dict[str, Any])
+async def pdf_to_jpg(
+    background_tasks: BackgroundTasks,
+    params: Optional[PdfToJpgSchema] = None,
+    file: UploadFile = File(..., description="Arquivo PDF para converter em JPG"),
+):
+    """
+    Converte um arquivo PDF em imagens JPG.
+    Se o PDF tiver mais de uma página, retorna um arquivo ZIP com todas as imagens.
+    """
+    # Log para debug
+    logging.info(f"Recebendo arquivo PDF para conversão: {file.filename}, Content-Type: {file.content_type}")
+    
+    # Verificar tamanho do arquivo (limite de 100MB)
+    MAX_FILE_SIZE = MAX_UPLOAD_SIZE
+    
+    # Verificar o tipo de arquivo
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Apenas arquivos PDF são aceitos")
+    
+    # Criar diretório temporário para processar o arquivo
+    conversion_id = str(uuid.uuid4())
+    temp_dir = os.path.join("/data", "pdf_to_jpg", conversion_id)
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    # Salvar o arquivo PDF com verificação de tamanho
+    pdf_path = os.path.join(temp_dir, "arquivo.pdf")
+    
+    try:
+        content = await file.read()
+        file_size = len(content)
+        
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413, 
+                detail=f"Arquivo muito grande. O tamanho máximo permitido é 100MB. Seu arquivo tem {file_size / (1024 * 1024):.2f}MB"
+            )
+            
+        with open(pdf_path, "wb") as pdf_file:
+            pdf_file.write(content)
+            
+        # Resetar o cursor do arquivo para o início
+        await file.seek(0)
+    
+    except Exception as e:
+        # Limpar diretório temporário em caso de erro
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        logger.error(f"Erro ao salvar arquivo PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro ao processar arquivo: {str(e)}")
+
+    # Diretório para salvar as imagens JPG
+    jpg_dir = os.path.join(temp_dir, "jpg")
+    os.makedirs(jpg_dir, exist_ok=True)
+    
+    # Configurações de conversão
+    config = {
+        "dpi": 200,
+        "quality": 90
+    }
+    
+    if params:
+        config["dpi"] = params.dpi if params.dpi else 200
+        config["quality"] = params.quality if params.quality else 90
+    
+    try:
+        # Converter PDF para JPG
+        image_paths = await convert_pdf_to_jpg(
+            pdf_path, 
+            jpg_dir,
+            dpi=config["dpi"],
+            quality=config["quality"]
+        )
+        
+        # Verificar se há uma ou mais páginas
+        if len(image_paths) == 1:
+            # Se há apenas uma página, retornar a imagem diretamente
+            return FileResponse(
+                image_paths[0],
+                media_type="image/jpeg",
+                filename=f"{os.path.splitext(file.filename)[0]}.jpg"
+            )
+        else:
+            # Se há múltiplas páginas, criar um arquivo ZIP
+            zip_path = os.path.join(temp_dir, "imagens.zip")
+            
+            with zipfile.ZipFile(zip_path, 'w') as zipf:
+                for i, img_path in enumerate(image_paths):
+                    zipf.write(
+                        img_path, 
+                        arcname=f"pagina_{i+1}.jpg"
+                    )
+            
+            # Retornar o arquivo ZIP
+            return FileResponse(
+                zip_path,
+                media_type="application/zip",
+                filename=f"{os.path.splitext(file.filename)[0]}_imagens.zip"
+            )
+    
+    except Exception as e:
+        logger.error(f"Erro ao processar PDF: {str(e)}")
+        # Limpar arquivos temporários em caso de erro
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=f"Erro ao processar PDF: {str(e)}")
+    
+    finally:
+        # Agendar limpeza dos arquivos temporários (após 30 minutos)
+        background_tasks.add_task(lambda: shutil.rmtree(temp_dir, ignore_errors=True))
 
 if __name__ == "__main__":
     import uvicorn

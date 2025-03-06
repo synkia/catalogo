@@ -262,14 +262,7 @@ const Dashboard = () => {
             <Divider />
             <ListItem>
               <ListItemText 
-                primary="3. Treine um modelo de IA" 
-                secondary="Use suas anotações para treinar um modelo Detectron2"
-              />
-            </ListItem>
-            <Divider />
-            <ListItem>
-              <ListItemText 
-                primary="4. Extraia produtos automaticamente" 
+                primary="3. Extraia produtos automaticamente" 
                 secondary="Processe novos catálogos e exporte os resultados em JSON"
               />
             </ListItem>

@@ -13,7 +13,7 @@
          v                             v
 +-------------------+        +---------------------+
 |                   |        |                     |
-|   ARMAZENAMENTO   |        |  DETECTRON2 / ML    |
+|   ARMAZENAMENTO   |        |  PYTORCH / OPENCV   |
 |                   |        |                     |
 +-------------------+        +---------------------+
 ```
@@ -85,7 +85,7 @@ Exportação para JSON
 
 3. **Gerenciador de Treinamento**
    - Preparação de datasets
-   - Configuração do Detectron2
+   - Configuração do PyTorch e OpenCV
    - Execução e monitoramento
 
 4. **Serviço de Inferência**

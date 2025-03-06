@@ -3,7 +3,7 @@ REGRAS DO PROJETO CATÁLOGO ML
 1. ESTRUTURA DO PROJETO
    - O frontend utiliza um servidor Nginx para servir páginas estáticas
    - O backend é construído com FastAPI
-   - O serviço ML utiliza Detectron2 para processamento de imagens
+   - O serviço ML utiliza PyTorch e OpenCV para processamento de imagens
    - Todos os serviços são containerizados com Docker
 
 2. PADRÕES DE DESENVOLVIMENTO

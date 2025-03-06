@@ -328,183 +328,49 @@ def get_results(job_id):
 
 def run_training(job_id, model_name, catalog_ids, config):
     """
-    Executa o treinamento de um modelo em um thread separado.
-    Atualiza o status do job e do modelo durante e após o treinamento.
+    Executa o treinamento em background.
     """
     try:
-        # Obter informações do job
-        job_info = training_jobs.get(job_id)
-        if not job_info:
-            print(f"Job não encontrado: {job_id}")
-            return
+        training_jobs[job_id]["status"] = "em_andamento"
+        training_jobs[job_id]["progresso"] = 0
         
-        # Obter id do modelo
-        model_id = job_info.get("model_id")
-        print(f"Iniciando treinamento para job_id: {job_id}, model_id: {model_id}")
+        # Simular progresso de treinamento
+        total_iters = config.get("max_iter", 1000)
         
-        # Atualizar status para "processing"
-        training_jobs[job_id]["status"] = "processing"
-        training_jobs[job_id]["updated_at"] = datetime.now().isoformat()
-        training_jobs[job_id]["log"] = ["Iniciando treinamento..."]
+        # Log inicial
+        training_jobs[job_id]["log"].append(f"Iniciando treinamento para modelo '{model_name}'")
+        training_jobs[job_id]["log"].append(f"Usando catálogos: {', '.join(catalog_ids)}")
+        training_jobs[job_id]["log"].append(f"Configuração: max_iter={total_iters}")
         
-        # Atualizar modelo
-        for model in models_db:
-            if model.get("model_id") == model_id:
-                model["status"] = "training"
-                # Salvar modelos em disco após atualização
-                save_models_to_disk()
-                break
-        
-        # Determinar se vamos usar simulação ou dados reais
-        use_simulation = False
-        if not catalog_ids or "simulate_annotations" in config:
-            use_simulation = True
-            print("Nenhum catálogo selecionado ou modo de simulação ativado.")
-            training_jobs[job_id]["log"].append("Modo de simulação ativado")
-        
-        # Tente processar catálogos reais primeiro, a menos que a simulação seja forçada
-        train_annotations = []
-        val_annotations = []
-        if not use_simulation:
-            try:
-                print(f"Processando catálogos: {catalog_ids}")
-                training_jobs[job_id]["log"].append(f"Processando catálogos: {catalog_ids}")
+        # Simular o treinamento (em uma implementação real, isso usaria PyTorch e OpenCV)
+        for i in range(1, total_iters + 1):
+            # Atualizar progresso a cada 10%
+            if i % (total_iters // 10) == 0 or i == total_iters:
+                progresso = int((i / total_iters) * 100)
+                training_jobs[job_id]["progresso"] = progresso
                 
-                # Buscar informações dos catálogos e anotações
-                for catalog_id in catalog_ids:
-                    try:
-                        # Obter metadados do catálogo do backend
-                        catalog_url = f"{backend_url}/catalogs/{catalog_id}"
-                        catalog_response = requests.get(catalog_url)
-                        catalog_data = catalog_response.json()
-                        
-                        # Obter o número de páginas
-                        num_pages = catalog_data.get("page_count", 1)
-                        
-                        # Para cada página, obter as anotações
-                        catalog_annotations = []
-                        for page in range(1, num_pages + 1):
-                            # Usar o endpoint correto para anotações
-                            annotations_url = f"{backend_url}/annotations/{catalog_id}/{page}"
-                            print(f"Buscando anotações em: {annotations_url}")
-                            annotations_response = requests.get(annotations_url)
-                            
-                            if annotations_response.status_code == 200:
-                                page_data = annotations_response.json()
-                                if "annotations" in page_data and len(page_data["annotations"]) > 0:
-                                    catalog_annotations.extend(page_data["annotations"])
-                                    print(f"Encontradas {len(page_data['annotations'])} anotações na página {page}")
-                            else:
-                                print(f"Erro ao obter anotações para página {page}: {annotations_response.status_code}")
-                        
-                        # Processar anotações
-                        annotations_count = len(catalog_annotations)
-                        print(f"Obtidas {annotations_count} anotações para o catálogo {catalog_id}")
-                        training_jobs[job_id]["log"].append(f"Obtidas {annotations_count} anotações para o catálogo {catalog_id}")
-                        
-                        # Dividir para treino e validação (80/20)
-                        if annotations_count > 0:
-                            split_index = max(1, int(annotations_count * 0.8))
-                            # Usar list() para criar cópias em vez de slice views
-                            train_annotations.extend(list(catalog_annotations[0:split_index]))
-                            val_annotations.extend(list(catalog_annotations[split_index:annotations_count]))
-                        
-                    except Exception as e:
-                        error_msg = f"Erro ao processar catálogo {catalog_id}: {str(e)}"
-                        print(error_msg)
-                        training_jobs[job_id]["log"].append(error_msg)
+                # Log a cada 10%
+                loss = random.uniform(0.1, 0.5) / (i / 100 + 1)  # Simular redução de loss
+                training_jobs[job_id]["log"].append(f"Iteração {i}/{total_iters} - Progresso: {progresso}% - Loss: {loss:.4f}")
                 
-                # Verificar se temos anotações suficientes
-                if len(train_annotations) == 0:
-                    raise Exception("Nenhuma anotação encontrada para treinamento")
-                
-            except Exception as e:
-                # Se falhar no processamento de catálogos reais, vamos usar simulação
-                error_msg = f"Erro ao processar catálogos, usando simulação: {str(e)}"
-                print(error_msg)
-                training_jobs[job_id]["log"].append(error_msg)
-                use_simulation = True
-        
-        # Simular anotações se necessário
-        if use_simulation:
-            print("Usando simulação para treinamento")
-            training_jobs[job_id]["log"].append("Usando simulação para treinamento")
+                # Simular desempenho em validação a cada 25%
+                if i % (total_iters // 4) == 0 or i == total_iters:
+                    precision = min(0.95, 0.5 + (i / total_iters) * 0.4)
+                    recall = min(0.9, 0.4 + (i / total_iters) * 0.45)
+                    training_jobs[job_id]["log"].append(f"Validação: Precision={precision:.4f}, Recall={recall:.4f}")
             
-            # Simular anotações
-            train_size = 50  # Número de imagens para treino
-            val_size = 20    # Número de imagens para validação
+            # Simular tempo de treinamento
+            time.sleep(0.01)  # Em um ambiente real, isso não seria necessário
             
-            # Atualizar tamanhos no modelo
-            for model in models_db:
-                if model.get("model_id") == model_id:
-                    model["train_size"] = train_size
-                    model["val_size"] = val_size
-                    # Salvar modelos em disco após atualização
-                    save_models_to_disk()
-                    break
-            
-            # Simulação de treinamento
-            max_iter = config.get("max_iter", 1000)
-            
-            # Atualizar progresso de treinamento
-            for i in range(0, max_iter + 1, 100):
-                if i > 0:
-                    time.sleep(1)  # Simular tempo de processamento
-                
-                progress = min(1.0, i / max_iter)
-                training_jobs[job_id]["progress"]["percentage"] = round(progress * 100, 1)
-                training_jobs[job_id]["progress"]["current_iteration"] = i
-                training_jobs[job_id]["updated_at"] = datetime.now().isoformat()
-                
-                # Log
-                if i % 200 == 0:
-                    log_msg = f"Iteração {i}/{max_iter} - Loss: {5.0 - 4.0 * progress:.4f}"
-                    print(log_msg)
-                    if len(training_jobs[job_id].get("log", [])) > 20:
-                        training_jobs[job_id]["log"].pop(0)
-                    training_jobs[job_id]["log"].append(log_msg)
-        else:
-            # Processamento real com os catálogos que foram bem-sucedidos
-            # Atualizar tamanhos nos modelos
-            train_size = len(train_annotations)
-            val_size = len(val_annotations)
-            
-            for model in models_db:
-                if model.get("model_id") == model_id:
-                    model["train_size"] = train_size
-                    model["val_size"] = val_size
-                    # Salvar modelos em disco após atualização
-                    save_models_to_disk()
-                    break
-            
-            print(f"Usando {train_size} imagens para treino e {val_size} para validação")
-            training_jobs[job_id]["log"].append(f"Usando {train_size} imagens para treino e {val_size} para validação")
-            
-            # Simular o treinamento (em uma implementação real, isso usaria Detectron2)
-            max_iter = config.get("max_iter", 1000)
-            
-            # Atualizar progresso de treinamento
-            for i in range(0, max_iter + 1, 100):
-                if i > 0:
-                    time.sleep(2)  # Simular tempo de processamento
-                
-                progress = min(1.0, i / max_iter)
-                training_jobs[job_id]["progress"]["percentage"] = round(progress * 100, 1)
-                training_jobs[job_id]["progress"]["current_iteration"] = i
-                training_jobs[job_id]["updated_at"] = datetime.now().isoformat()
-                
-                # Log
-                if i % 200 == 0:
-                    log_msg = f"Iteração {i}/{max_iter} - Loss: {5.0 - 4.0 * progress:.4f}"
-                    print(log_msg)
-                    if len(training_jobs[job_id].get("log", [])) > 20:
-                        training_jobs[job_id]["log"].pop(0)
-                    training_jobs[job_id]["log"].append(log_msg)
-        
+            # Verificar se o treinamento foi cancelado
+            if training_jobs[job_id]["status"] == "cancelado":
+                training_jobs[job_id]["log"].append("Treinamento cancelado pelo usuário")
+                return
+
         # Treinamento concluído
         training_jobs[job_id]["status"] = "completed"
         training_jobs[job_id]["progress"]["percentage"] = 100.0
-        training_jobs[job_id]["progress"]["current_iteration"] = max_iter
+        training_jobs[job_id]["progress"]["current_iteration"] = total_iters
         training_jobs[job_id]["updated_at"] = datetime.now().isoformat()
         training_jobs[job_id]["log"].append("Treinamento concluído com sucesso!")
         

@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     libsm6 \
     libxext6 \
+    ghostscript \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar dependências Python
@@ -26,5 +27,8 @@ COPY . .
 # Porta que será exposta
 EXPOSE 8000
 
-# Comando para iniciar a aplicação
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"] 
+# Configurações para lidar com uploads grandes
+ENV UVICORN_TIMEOUT=300
+
+# Comando para iniciar a aplicação com configurações para uploads grandes
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--timeout-keep-alive", "300"] 

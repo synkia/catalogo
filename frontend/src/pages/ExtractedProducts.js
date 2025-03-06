@@ -494,12 +494,7 @@ const ExtractedProducts = () => {
             </Box>
             <Box component="li" sx={{ mb: 1 }}>
               <Typography>
-                <strong>Treine um modelo</strong> na página <Link component={RouterLink} to="/models">Modelos</Link> usando suas anotações manuais.
-              </Typography>
-            </Box>
-            <Box component="li" sx={{ mb: 1 }}>
-              <Typography>
-                <strong>Execute a detecção</strong> na página <Link component={RouterLink} to="/models">Modelos</Link> clicando no botão "Executar Detecção" e selecionando um catálogo.
+                <strong>Execute a detecção</strong> na página de detalhes do catálogo após fazer anotações.
               </Typography>
             </Box>
             <Box component="li">

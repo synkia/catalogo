@@ -16,7 +16,7 @@ Como vendedor de marketplaces, analisar catálogos de fornecedores é um trabalh
 
 Uma aplicação web que:
 1. Recebe catálogos em PDF
-2. Utiliza visão computacional (Detectron2) para identificar produtos
+2. Utiliza algoritmos de processamento de imagem para identificar produtos
 3. Permite anotação manual para treinar o modelo
 4. Extrai dados em formato JSON para integração com APIs de marketplaces
 
@@ -26,7 +26,6 @@ Uma aplicação web que:
 
 - Docker
 - Docker Compose
-- GPU com suporte a CUDA (opcional, para acelerar o treinamento)
 
 ### 📦 Instalação
 
@@ -109,7 +108,6 @@ Para mais detalhes sobre o projeto, consulte:
 - OpenCV
 
 ### ML/Visão Computacional
-- Detectron2
 - PyTorch
 - OpenCV
 
@@ -200,7 +198,7 @@ Todos os endpoints foram testados e estão funcionando corretamente.
 
 ### Próximos Passos
 1. Integrar o serviço ML com o backend
-2. Implementar a detecção real de objetos usando Detectron2
+2. Implementar o processamento real de imagens usando OpenCV e PyTorch
 3. Implementar o treinamento real de modelos
 
 ## Como Executar o Projeto
@@ -213,7 +211,7 @@ Todos os endpoints foram testados e estão funcionando corretamente.
 ## Estrutura do Projeto
 - **frontend**: Aplicação React servida pelo Nginx
 - **backend**: API FastAPI
-- **ml-service**: Serviço de processamento de imagens com Detectron2
+- **ml-service**: Serviço de processamento de imagens com PyTorch e OpenCV
 - **mongodb**: Banco de dados
 - **minio**: Armazenamento de objetos
 - **nginx**: Servidor web para o frontend

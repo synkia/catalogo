@@ -19,7 +19,6 @@ O projeto é dividido em vários containers, cada um com uma responsabilidade es
 
 3. **Serviço ML**
    - Executa tarefas de processamento de imagens e machine learning
-   - Utiliza Detectron2 para detecção de objetos
    - Disponível na porta 5050
 
 4. **Banco de Dados (MongoDB)**

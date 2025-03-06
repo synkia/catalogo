@@ -310,7 +310,6 @@ const DetectionResults = () => {
     const exportData = {
       job_id: jobId,
       catalog_id: results.catalog_id,
-      model_id: results.model_id,
       detection_date: results.completed_at || results.created_at,
       products: []
     };
@@ -741,17 +740,6 @@ const DetectionResults = () => {
             sx={{ cursor: 'pointer' }}
           >
             Dashboard
-          </Link>
-          <Link 
-            underline="hover" 
-            color="inherit" 
-            onClick={() => {
-              console.log('Clique em Modelos no breadcrumbs');
-              navigate('/models');
-            }}
-            sx={{ cursor: 'pointer' }}
-          >
-            Modelos
           </Link>
           <Typography color="text.primary">Resultados da Detecção</Typography>
         </Breadcrumbs>
